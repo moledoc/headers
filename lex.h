@@ -32,10 +32,10 @@ typedef struct {
 } lex_token;
 
 void lex_free(lex_token **tokens, size_t n);
-void string(lex_token *token);
-void print(lex_token **token, int token_count);
-char *bufferize(FILE *stream, size_t *buf_counter);
-lex_token **tokenize(FILE *stream, size_t *token_counter);
+void lex_string(lex_token *token);
+void lex_print(lex_token **token, int token_count);
+char *lex_bufferize(FILE *stream, size_t *buf_counter);
+lex_token **lex_tokenize(FILE *stream, size_t *token_counter);
 
 #endif // LEX_H_
 
@@ -55,17 +55,17 @@ void lex_free(lex_token **tokens, size_t n) {
 	free(tokens);
 }
 
-void string(lex_token *token) {
+void lex_string(lex_token *token) {
 	printf("%s:%d:%d %s(%s)(%d)\n", token->fname, token->row, token->col, LEX_TOKEN_NAMES[token->t], token->v, token->vlen);
 }
 
-void print(lex_token **token, int token_count) {
+void lex_print(lex_token **token, int token_count) {
 	for (int i=0; i< token_count; ++i) {
-		string(token[i]);
+		lex_string(token[i]);
 	}
 }
 
-char *bufferize(FILE *stream, size_t *buf_counter) {
+char *lex_bufferize(FILE *stream, size_t *buf_counter) {
 	struct stat stats;
 	fstat(fileno(stream), &stats);
 	int stats_mode = stats.st_mode;
@@ -92,14 +92,14 @@ char *bufferize(FILE *stream, size_t *buf_counter) {
 	return buf;		
 }
 
-lex_token **tokenize(FILE *stream, size_t *token_counter) {
+lex_token **lex_tokenize(FILE *stream, size_t *token_counter) {
 	if (LEX_TOKEN_COUNT != sizeof(LEX_TOKEN_NAMES)/sizeof(*LEX_TOKEN_NAMES)) {
 		return NULL;
 	}
 	size_t buf_counter = 0;
-	char *buf = bufferize(stream, &buf_counter);
+	char *buf = lex_bufferize(stream, &buf_counter);
 	if (buf == NULL) {
-		fprintf(stderr, "%s:%d: [ERROR]: tokenizing failed: bufferizer returned NULL buffer\n",__FILE__, __LINE__);
+		fprintf(stderr, "%s:%d: [ERROR]: lex_tokenize failed: lex_bufferize returned NULL buffer\n",__FILE__, __LINE__);
 		exit(1);
 	} 
 

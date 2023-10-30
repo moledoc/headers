@@ -6,9 +6,9 @@ int main(int argc, char **argv) {
 	char *fname = "test_lex.txt";
 	FILE *fptr = fopen(fname, "r");
 	LEX_FNAME=fname;
-	lex_token **tokens = tokenize(fptr, &token_counter);
+	lex_token **tokens = lex_tokenize(fptr, &token_counter);
 	fclose(fptr);
-	print(tokens, token_counter);
+	lex_print(tokens, token_counter);
 	lex_free(tokens, token_counter);
 }
 
