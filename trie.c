@@ -115,7 +115,7 @@ int idx_map(char c) {
 	return idx;
 }
 
-int trie_add(trie_node *tn, const char *v) {
+trie_node *trie_add(trie_node *tn, const char *v) {
 	char *vc = (char *)v;
 	size_t offset = 0;
 	while (*vc != '\0') {
@@ -133,7 +133,7 @@ int trie_add(trie_node *tn, const char *v) {
 		++vc;
 	}
 	tn->is_leaf = 1;
-	return 0;
+	return tn;
 }
 
 trie_node *trie_find(trie_node *tn, char *v, int *child_list_idx) {
@@ -147,13 +147,11 @@ trie_node *trie_find(trie_node *tn, char *v, int *child_list_idx) {
 	size_t vlen = mystrlen(v);
 	for (int i=0; i<vlen; ++i) {
 		if (tn->is_leaf) {
-			printf("[INFO]: node '%s' doesn't exist\n", v);
 			return NULL;
 		}
 		*child_list_idx = idx_map(v[i]);
 		trie_node *child = tn->children[*child_list_idx];
 		if (!child) {
-			printf("[INFO]: node '%s' doesn't exist\n", v);
 			return NULL;
 		}
 		tn = child;
@@ -161,18 +159,23 @@ trie_node *trie_find(trie_node *tn, char *v, int *child_list_idx) {
 	return tn;
 }
 
+// return vals
+// 1 - successful
+// 0 - nothing to delete
+// -1 - can't delete - node has children
 int trie_delete(trie_node *tn, char *v){
 	int idx;
 	tn = trie_find(tn, v, &idx);
-	if (!tn->is_leaf) {
-		fprintf(stderr, "[ERROR]: ");
-		fprintf(stderr, "node with children is not allowed to be deleted\n");
+	if (!tn) {
 		return 0;
+	}
+	if (!tn->is_leaf) {
+		return -1;
 	}
 	trie_node *parent = tn->parent;
 	trie_free(tn);
 	parent->children[idx] = NULL;
-	return 0;
+	return 1;
 }
 
 int main(int argc, char **argv) {
@@ -186,20 +189,60 @@ int main(int argc, char **argv) {
 	trie_print(root);
 
 	int idx;
-	printf("\nFinding 'Strin':\n");
-	trie_print(trie_find(root, "Strin", &idx));
-	printf("\nFinding 'St':\n");
-	trie_print(trie_find(root, "St", NULL));
+	trie_node *nd;
 
-	printf("\nDeleting 'Strin'\n");
-	trie_delete(root, "Strin");
-	printf("Node 'Strin' should still exist\n");
-	trie_print(trie_find(root, "Strin", &idx));
+	char *str = "Strin";
+	printf("\nFinding '%s':\n", str);
+	nd = trie_find(root, str, &idx);
+	if (!nd) {
+		printf("%s:%d: Didn't find node '%s', but should've\n", __FILE__, __LINE__, str);
+	}
+	trie_print(nd);
 
-	printf("\nDeleting 'String'\n");
-	trie_delete(root, "String");
-	printf("Node 'String' shouldn't exist\n");
-	trie_print(trie_find(root, "String", &idx));
+	str = "St";
+	printf("\nFinding '%s':\n",str);
+	nd = trie_find(root, str, NULL);
+	if (!nd) {
+		printf("%s:%d: Didn't find node '%s', but should've\n", __FILE__, __LINE__, str);
+	}
+	trie_print(nd);
+
+	int is_successful = 0;
+	str = "Strin";
+	printf("\nDeleting '%s'\n", str);
+	is_successful = trie_delete(root, str);
+	printf("Deleting '%s' return state: %d\n", str, is_successful);
+	if (is_successful == -1) {
+		printf("Node '%s' still has children - nothing was deleted\n", str);
+	}
+	printf("Node '%s' should still exist\n", str);
+	nd = trie_find(root, str, &idx);
+	if (!nd) {
+		printf("%s:%d: Didn't find node '%s', but should've\n", __FILE__, __LINE__, str);
+	}
+	trie_print(nd);
+
+	str = "String";
+	printf("\nDeleting '%s'\n", str);
+	is_successful = trie_delete(root, str);
+	printf("Node '%s' return state: %d\n", str, is_successful);
+	if (is_successful == 1) {
+		printf("Node '%s' was deleted successfully\n", str);
+	}
+	printf("Node '%s' shouldn't exist\n", str);
+	nd = trie_find(root, str, &idx);
+	if (!nd) {
+		printf("Didn't find node '%s' as expected\n", str);
+	}
+	trie_print(nd);
+
+	str = "Tree";
+	printf("\nDeleting '%s'\n", str);
+	is_successful = trie_delete(root, str);
+	printf("Node '%s' return state: %d\n", str, is_successful);
+	if (is_successful == 0) {
+		printf("Node '%s' was not found, nothing deleted\n", str);
+	}
 
 	trie_free(root);
 }
