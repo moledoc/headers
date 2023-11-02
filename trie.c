@@ -99,9 +99,11 @@ int trie_add(trie_node *tn, const char *v) {
 		}
 		trie_node *child = tnc->children[idx];
 		if (child == NULL) {
-			printf("HERE\n");
 			child = trie_new(tnc, v, offset);
 			tnc->children[idx] = child;
+		}
+		if (tnc->is_leaf) {
+			tnc->is_leaf = false;
 		}
 		tnc = child;
 		++vc;
@@ -123,6 +125,7 @@ int trie_delete(trie_node *tn, char *v){
 int main(int argc, char **argv) {
 	trie_node *root = trie_new(NULL, "root", 4);
 	printf("%p %s %p %p\n", root, root->v, root->children, NULL);
+	trie_add(root, "Str");
 	trie_add(root, "String");
 	trie_add(root, "Street");
 	trie_print(root);
