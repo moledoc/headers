@@ -24,6 +24,7 @@ static const char *LOG_LEVEL_NAMES[] = {
 };
 
 enum LOG_LEVEL log_level = INFO;
+int LOG_TMP_BUF_SIZE = 1024;
 
 int log_fatal(char *format, ...);
 int log_err(char *format, ...);
@@ -68,9 +69,9 @@ int _log_blog(char *buf, size_t bsize, enum LOG_LEVEL lvl, char *fmt, va_list ar
 		while (*(lvl_name++) != '\0') {
 			++i;
 		}
-		char tmp[1024];
+		char tmp[LOG_TMP_BUF_SIZE];
 		n += snprintf(buf, bsize-i, LOG_LEVEL_NAMES[lvl]);
-		int n_tmp = vsnprintf(tmp, 1024, fmt, args);
+		int n_tmp = vsnprintf(tmp, LOG_TMP_BUF_SIZE, fmt, args);
 		n += vsnprintf(buf+i, bsize-n_tmp, fmt, args);
 	}
 	return n;
