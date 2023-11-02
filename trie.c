@@ -3,8 +3,7 @@
 
 #define TRIE_CHILDREN 1
 
-// 0                                                  25                                          51                   63
-// ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-
+// A(0)BCDEFGHIJKLMNOPQRSTUVWXYZ(25)abcdefghijklmnopqrstuvwxyz(51)0123456789_-(63)
 #define TRIE_CHILDREN_SIZE 64
 
 enum bool { false=0, true=1};
@@ -90,7 +89,7 @@ int trie_add(trie_node *tn, const char *v) {
 		if ('A' <= *vc && *vc <= 'Z') {
 			idx = *vc-'A';
 		} else if ('a' <= *vc && *vc <= 'z') {
-			idx = *vc-'a'+25;
+			idx = *vc-'a' + 25;
 		} else if ('0' <= *vc && *vc <= '9') {
 			idx = *vc-'0' + 51;
 		} else if (*vc == '_') {
