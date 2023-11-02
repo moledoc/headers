@@ -77,23 +77,28 @@ trie_node *trie_new(trie_node *parent, const char *v, size_t vlen) {
 	return new;
 }
 
+int idx_map(char c) {
+	int idx = 0;
+	if ('A' <= c && c <= 'Z') {
+		idx = c-'A';
+	} else if ('a' <= c && c <= 'z') {
+		idx = c-'a' + 25;
+	} else if ('0' <= c && c <= '9') {
+		idx = c-'0' + 51;
+	} else if (c == '_') {
+		idx = 62;
+	} else if (c == '-') {
+		idx = 63;
+	}
+	return idx;
+}
+
 int trie_add(trie_node *tn, const char *v) {
 	char *vc = (char *)v;
 	size_t offset = 0;
 	while (*vc != '\0') {
 		++offset;
-		int idx = 0;
-		if ('A' <= *vc && *vc <= 'Z') {
-			idx = *vc-'A';
-		} else if ('a' <= *vc && *vc <= 'z') {
-			idx = *vc-'a' + 25;
-		} else if ('0' <= *vc && *vc <= '9') {
-			idx = *vc-'0' + 51;
-		} else if (*vc == '_') {
-			idx = 62;
-		} else if (*vc == '-') {
-			idx = 63;
-		}
+		int idx = idx_map(*vc);
 		trie_node *child = tn->children[idx];
 		if (child == NULL) {
 			child = trie_new(tn, v, offset);
@@ -109,9 +114,44 @@ int trie_add(trie_node *tn, const char *v) {
 	return 0;
 }
 
-int trie_find(trie_node *tn, char *v) {
-	// UNIMPLEMENTED
-	return 0;
+int mystrcomp(const char *s1, const char *s2) {
+	char *s1c = (char *)s1;
+	char *s2c = (char *)s2;
+	while (*s1c != '\0' && *s2c != '\0') {
+		if (*s1c != *s2c) {
+			break;
+		}
+		++s1c;
+		++s2c;
+	}
+	return *s1c == *s2c;
+}
+
+size_t mystrlen(const char *s1) {
+	char *s1c = (char*)s1;
+	size_t size = 0;
+	while (*(s1c++) != '\0') {
+		++size;
+	}
+	return size;
+}
+
+trie_node *trie_find(trie_node *tn, char *v) {
+	if (mystrcomp(v, tn->v)) {
+		return tn;
+	}
+	size_t vlen = mystrlen(v);
+	for (int i=0; i<vlen; ++i) {
+		if (tn->is_leaf) {
+			return NULL;
+		}
+		trie_node *child = tn->children[idx_map(v[i])];
+		if (!child) {
+			return NULL;
+		}
+		tn = child;
+	}
+	return tn;
 }
 
 int trie_delete(trie_node *tn, char *v){
@@ -121,11 +161,18 @@ int trie_delete(trie_node *tn, char *v){
 
 int main(int argc, char **argv) {
 	trie_node *root = trie_new(NULL, "root", 4);
+	printf("Adding nodes to root\n");
 	trie_add(root, "Str");
 	trie_add(root, "Stra");
 	trie_add(root, "str");
 	trie_add(root, "String");
 	trie_add(root, "Street");
 	trie_print(root);
+
+	printf("\nFinding 'Strin':\n");
+	trie_print(trie_find(root, "Strin"));
+	printf("\nFinding 'St':\n");
+	trie_print(trie_find(root, "St"));
+
 	trie_free(root);
 }
