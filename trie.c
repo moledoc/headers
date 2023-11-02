@@ -5,6 +5,28 @@
 #define TRIE_CHILDREN_SIZE 64
 #define TRIE_PRINT_PATH_SIZE 1024
 
+int mystrcomp(const char *s1, const char *s2) {
+	char *s1c = (char *)s1;
+	char *s2c = (char *)s2;
+	while (*s1c != '\0' && *s2c != '\0') {
+		if (*s1c != *s2c) {
+			break;
+		}
+		++s1c;
+		++s2c;
+	}
+	return *s1c == *s2c;
+}
+
+size_t mystrlen(const char *s1) {
+	char *s1c = (char*)s1;
+	size_t size = 0;
+	while (*(s1c++) != '\0') {
+		++size;
+	}
+	return size;
+}
+
 enum bool { false=0, true=1};
 
 typedef struct trie_node {
@@ -36,7 +58,7 @@ void trie_print_rec(trie_node *tn, char ***path, int *path_size, int i) {
 	if (tn == NULL) {
 		return;
 	}
-	if (tn->v != "") {
+	if (!mystrcomp("", tn->v)) {
 		(*path)[i] = tn->v;
 		++i;
 		if (i >= *path_size) {
@@ -114,39 +136,24 @@ int trie_add(trie_node *tn, const char *v) {
 	return 0;
 }
 
-int mystrcomp(const char *s1, const char *s2) {
-	char *s1c = (char *)s1;
-	char *s2c = (char *)s2;
-	while (*s1c != '\0' && *s2c != '\0') {
-		if (*s1c != *s2c) {
-			break;
-		}
-		++s1c;
-		++s2c;
-	}
-	return *s1c == *s2c;
-}
-
-size_t mystrlen(const char *s1) {
-	char *s1c = (char*)s1;
-	size_t size = 0;
-	while (*(s1c++) != '\0') {
-		++size;
-	}
-	return size;
-}
-
-trie_node *trie_find(trie_node *tn, char *v) {
+trie_node *trie_find(trie_node *tn, char *v, int *child_list_idx) {
 	if (mystrcomp(v, tn->v)) {
 		return tn;
+	}
+	if (!child_list_idx) {
+		int tmp;
+		child_list_idx = &tmp;
 	}
 	size_t vlen = mystrlen(v);
 	for (int i=0; i<vlen; ++i) {
 		if (tn->is_leaf) {
+			printf("[INFO]: node '%s' doesn't exist\n", v);
 			return NULL;
 		}
-		trie_node *child = tn->children[idx_map(v[i])];
+		*child_list_idx = idx_map(v[i]);
+		trie_node *child = tn->children[*child_list_idx];
 		if (!child) {
+			printf("[INFO]: node '%s' doesn't exist\n", v);
 			return NULL;
 		}
 		tn = child;
@@ -155,7 +162,16 @@ trie_node *trie_find(trie_node *tn, char *v) {
 }
 
 int trie_delete(trie_node *tn, char *v){
-	// UNIMPLEMENTED
+	int idx;
+	tn = trie_find(tn, v, &idx);
+	if (!tn->is_leaf) {
+		fprintf(stderr, "[ERROR]: ");
+		fprintf(stderr, "node with children is not allowed to be deleted\n");
+		return 0;
+	}
+	trie_node *parent = tn->parent;
+	trie_free(tn);
+	parent->children[idx] = NULL;
 	return 0;
 }
 
@@ -169,10 +185,21 @@ int main(int argc, char **argv) {
 	trie_add(root, "Street");
 	trie_print(root);
 
+	int idx;
 	printf("\nFinding 'Strin':\n");
-	trie_print(trie_find(root, "Strin"));
+	trie_print(trie_find(root, "Strin", &idx));
 	printf("\nFinding 'St':\n");
-	trie_print(trie_find(root, "St"));
+	trie_print(trie_find(root, "St", NULL));
+
+	printf("\nDeleting 'Strin'\n");
+	trie_delete(root, "Strin");
+	printf("Node 'Strin' should still exist\n");
+	trie_print(trie_find(root, "Strin", &idx));
+
+	printf("\nDeleting 'String'\n");
+	trie_delete(root, "String");
+	printf("Node 'String' shouldn't exist\n");
+	trie_print(trie_find(root, "String", &idx));
 
 	trie_free(root);
 }
