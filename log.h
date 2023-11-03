@@ -1,3 +1,4 @@
+#pragma once
 
 #ifndef LOG_H_
 #define LOG_H_
