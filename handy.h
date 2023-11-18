@@ -15,10 +15,17 @@ char btoc(const char *b1); // binary representation to character
 typedef struct {
 	char **files;
 	size_t fsize;
+	size_t file_count;
 	char **dirs;
 	size_t dsize;
+	size_t dir_count;
 } ftree;
-int walk(char *path, ftree *ft, size_t *file_count, size_t *dir_count);
+
+int walk(char *path, ftree *ft);
+void ftree_free_list(char **lst, size_t lst_size);
+void ftree_free(ftree ft);
+void ftree_print_list(char **lst, size_t lst_size);
+void ftree_print(ftree ft);
 
 #endif // TOOLBOX_H_
 
@@ -94,7 +101,7 @@ char btoc(const char *b1) {
 	return c;
 }
 
-int walk(char *path, ftree *ft, size_t *file_count, size_t *dir_count) {
+int walk(char *path, ftree *ft) {
 	DIR *dp;
 	struct dirent *ep;
 	dp = opendir(path);
@@ -123,26 +130,26 @@ int walk(char *path, ftree *ft, size_t *file_count, size_t *dir_count) {
 		}
 		switch (ep->d_type) {
 		case DT_DIR:
-			walk(new_path, ft, file_count, dir_count);
+			walk(new_path, ft);
 			// MAYBE: can do without calloc?
-			ft->dirs[*dir_count] = calloc(new_path_size, sizeof(char));
+			ft->dirs[ft->dir_count] = calloc(new_path_size, sizeof(char));
 			for (int i=0; i<new_path_size; ++i) {
-				ft->dirs[*dir_count][i] = new_path[i];
+				ft->dirs[ft->dir_count][i] = new_path[i];
 			}
-			++(*dir_count);
-			if (*dir_count > ft->dsize) {
+			++(ft->dir_count);
+			if (ft->dir_count > ft->dsize) {
 				ft->dsize *= 2;
 				ft->dirs = realloc(ft->dirs, ft->dsize);
 			}
 			break;
 		case DT_REG:
 			// MAYBE: can do without calloc?
-			ft->files[*file_count] = calloc(new_path_size, sizeof(char));
+			ft->files[ft->file_count] = calloc(new_path_size, sizeof(char));
 			for (int i=0; i<new_path_size; ++i) {
-				ft->files[*file_count][i] = new_path[i];
+				ft->files[ft->file_count][i] = new_path[i];
 			}
-			++(*file_count);
-			if (*file_count > ft->fsize) {
+			++(ft->file_count);
+			if (ft->file_count > ft->fsize) {
 				ft->fsize *= 2;
 				ft->files = realloc(ft->files, ft->fsize);
 			}
@@ -152,5 +159,28 @@ int walk(char *path, ftree *ft, size_t *file_count, size_t *dir_count) {
 	(void) closedir(dp);
 }
 
+void ftree_free_list(char **lst, size_t lst_size) {
+	for (int i=0; i<lst_size; ++i) {
+		free(lst[i]);
+	}
+}
+
+void ftree_free(ftree ft) {
+	ftree_free_list(ft.dirs, ft.dir_count);
+	ftree_free_list(ft.files, ft.file_count);
+	free(ft.files);
+	free(ft.dirs);
+}
+
+void ftree_print_list(char **lst, size_t lst_size) {
+	for (int i=0; i<lst_size; ++i) {
+		printf("%s\n", lst[i]);
+	}
+}
+
+void ftree_print(ftree ft) {
+	ftree_print_list(ft.dirs, ft.dir_count);
+	ftree_print_list(ft.files, ft.file_count);
+}
 
 #endif // TOOLBOX_IMPLEMENTATION
