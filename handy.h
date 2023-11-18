@@ -75,6 +75,44 @@ void mymemset(char *buf, int v, size_t size) {
 	}
 }
 
+char **split(char *s, size_t slen, char sep, size_t *elem_count) {
+	int split_size = 256;
+	int *split_ids = calloc(split_size, sizeof(int));
+	int split_count = 0;
+	for (int i=0; i<slen; ++i) {
+		if (s[i] == sep) {
+			split_ids[split_count] = i;
+			++split_count;
+			if (split_count > split_size) {
+				split_size *= 2;
+				split_ids = realloc(split_ids, split_size);
+			}
+		}
+	}
+	*elem_count = split_count + 1;
+	char **elems = calloc(*elem_count, sizeof(char *));
+	for (int i=0; i<split_count+1; ++i) {
+		int len;
+		int offset;
+		if (i == 0) {
+			len = split_ids[i];
+			offset = 0;
+		} else if (i == split_count) {
+			len = slen - split_ids[i] - 1; // -1 to exclude sep (lower bound)
+			offset = split_ids[i-1] + 1;
+		} else {
+			len = split_ids[i] -1 - split_ids[i-1]; // -1 to exclude sep from the range (lower bound)
+			offset = split_ids[i-1] + 1; // +1 to exclude sep from the range (lower bound)
+		}
+		elems[i] = calloc(len, sizeof(char));
+		for (int j=0; j<len; ++j) {
+			elems[i][j] = s[offset+j];
+		}
+	}
+	free(split_ids);
+	return elems;		
+}
+
 char *ctob(const char c1) {
 	char c1c = (char)c1;
 	size_t blen = 0;
@@ -104,7 +142,7 @@ char btoc(const char *b1) {
 	return c;
 }
 
-int walk(char *path, ftree *ft) {
+int walk(char *path, ftree *ft) { // , char *filter
 	DIR *dp;
 	struct dirent *ep;
 	dp = opendir(path);
@@ -166,30 +204,30 @@ int walk(char *path, ftree *ft) {
 	(void) closedir(dp);
 }
 
-void ftree_free_list(char **lst, size_t lst_size) {
+void free_str_list(char **lst, size_t lst_size) {
 	for (int i=0; i<lst_size; ++i) {
 		free(lst[i]);
 	}
 }
 
 void ftree_free(ftree ft) {
-	ftree_free_list(ft.dirs, ft.dir_count);
-	ftree_free_list(ft.files, ft.file_count);
+	free_str_list(ft.dirs, ft.dir_count);
+	free_str_list(ft.files, ft.file_count);
 	free(ft.files);
 	free(ft.dirs);
 	free(ft.fp_lens);
 	free(ft.dp_lens);
 }
 
-void ftree_print_list(char **lst, size_t lst_size) {
+void print_str_list(char **lst, size_t lst_size) {
 	for (int i=0; i<lst_size; ++i) {
 		printf("%s\n", lst[i]);
 	}
 }
 
 void ftree_print(ftree ft) {
-	ftree_print_list(ft.dirs, ft.dir_count);
-	ftree_print_list(ft.files, ft.file_count);
+	print_str_list(ft.dirs, ft.dir_count);
+	print_str_list(ft.files, ft.file_count);
 }
 
 #endif // TOOLBOX_IMPLEMENTATION
