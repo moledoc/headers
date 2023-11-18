@@ -8,14 +8,24 @@
 char *shift(int *argc, char ***argv);
 size_t mystrlen(const char *s1);
 int mystrcomp(const char *s1, const char *s2);
+void mymemset(char *buf, int v, size_t size);
 char *ctob(const char c1); // character to binary representation
 char btoc(const char *b1); // binary representation to character
+
+typedef struct {
+	char **files;
+	size_t fsize;
+	char **dirs;
+	size_t dsize;
+} ftree;
+int walk(char *path, ftree *ft, size_t *file_count, size_t *dir_count);
 
 #endif // TOOLBOX_H_
 
 #ifdef TOOLBOX_IMPLEMENTATION
 
 #include <stdlib.h>
+#include <dirent.h>
 
 char *shift(int *argc, char ***argv) {
 	if (*argc <= 0) {
@@ -49,6 +59,12 @@ int mystrcomp(const char *s1, const char *s2) {
 	return *s1c == *s2c;
 }
 
+void mymemset(char *buf, int v, size_t size) {
+	for (size_t i=0; i<size; ++i) {
+		buf[i] = v;
+	}
+}
+
 char *ctob(const char c1) {
 	char c1c = (char)c1;
 	size_t blen = 0;
@@ -76,6 +92,64 @@ char btoc(const char *b1) {
 	}
 	c += (b1c[blen-1] == '1');
 	return c;
+}
+
+int walk(char *path, ftree *ft, size_t *file_count, size_t *dir_count) {
+	DIR *dp;
+	struct dirent *ep;
+	dp = opendir(path);
+	if (!dp) {
+		return 0;
+	}
+	size_t path_size = 0;
+	while (path[path_size] != '\0') {
+		++path_size;
+	}
+	while (ep = readdir(dp)) {
+		if (mystrcomp(".", ep->d_name) || mystrcomp("..", ep->d_name)) {
+			continue;
+		}
+		// MAYBE: extract to something like strcat
+		size_t new_path_size = path_size+ep->d_reclen+1;
+		char new_path[new_path_size];
+		for (int i=0; i<new_path_size; ++i) {
+			if (i < path_size) {
+				new_path[i] = path[i];
+			} else if (i == path_size) {
+				new_path[i] = '/';
+			} else {
+				new_path[i] = ep->d_name[i-1-path_size];
+			}
+		}
+		switch (ep->d_type) {
+		case DT_DIR:
+			walk(new_path, ft, file_count, dir_count);
+			// MAYBE: can do without calloc?
+			ft->dirs[*dir_count] = calloc(new_path_size, sizeof(char));
+			for (int i=0; i<new_path_size; ++i) {
+				ft->dirs[*dir_count][i] = new_path[i];
+			}
+			++(*dir_count);
+			if (*dir_count > ft->dsize) {
+				ft->dsize *= 2;
+				ft->dirs = realloc(ft->dirs, ft->dsize);
+			}
+			break;
+		case DT_REG:
+			// MAYBE: can do without calloc?
+			ft->files[*file_count] = calloc(new_path_size, sizeof(char));
+			for (int i=0; i<new_path_size; ++i) {
+				ft->files[*file_count][i] = new_path[i];
+			}
+			++(*file_count);
+			if (*file_count > ft->fsize) {
+				ft->fsize *= 2;
+				ft->files = realloc(ft->files, ft->fsize);
+			}
+			break;
+		}
+	}
+	(void) closedir(dp);
 }
 
 
