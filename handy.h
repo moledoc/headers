@@ -9,6 +9,9 @@ char *shift(int *argc, char ***argv);
 size_t mystrlen(const char *s1);
 int mystrcomp(const char *s1, const char *s2);
 void mymemset(char *buf, int v, size_t size);
+void mymemcpy(char *dest, char *src, size_t size);
+char **split(char *s, size_t slen, char sep, size_t *elem_count);
+int contains(char **ss, size_t sslen, char *s);
 char *ctob(const char c1); // character to binary representation
 char btoc(const char *b1); // binary representation to character
 
@@ -24,7 +27,7 @@ typedef struct {
 	size_t dir_count; // current directory count
 } ftree;
 
-int walk(char *path, ftree *ft);
+int walk(char *path, ftree *ft, char *filter);  // filter expects '|' as separator
 void ftree_free_list(char **lst, size_t lst_size);
 void ftree_free(ftree ft);
 void ftree_print_list(char **lst, size_t lst_size);
@@ -75,6 +78,64 @@ void mymemset(char *buf, int v, size_t size) {
 	}
 }
 
+void mymemcpy(char *dest, char *src, size_t size) {
+	for (int i=0; i<size; ++i) {
+		dest[i] = src[i];
+	}
+}
+
+int contains(char **ss, size_t sslen, char *s) {
+	for (int i=0; i<sslen; ++i) {
+		if (!mystrcomp(ss[i], s)) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
+char **split(char *s, size_t slen, char sep, size_t *elem_count) {
+	int split_size = 256;
+	int *split_ids = calloc(split_size, sizeof(int));
+	int split_count = 0;
+	for (int i=0; i<slen; ++i) {
+		if (s[i] == sep) {
+			split_ids[split_count] = i;
+			++split_count;
+			if (split_count > split_size) {
+				split_size *= 2;
+				split_ids = realloc(split_ids, split_size);
+			}
+		}
+	}
+	*elem_count = split_count + 1;
+	char **elems = calloc(*elem_count, sizeof(char *));
+	if (*elem_count == 1) {
+		elems[0] = calloc(slen, sizeof(char));
+		mymemcpy(elems[0], s, slen);
+		return elems;
+	}
+	for (int i=0; i<split_count+1; ++i) {
+		int len;
+		int offset;
+		if (i == 0) {
+			len = split_ids[i];
+			offset = 0;
+		} else if (i == split_count) {
+			len = slen - split_ids[i] - 1; // -1 to exclude sep (lower bound)
+			offset = split_ids[i-1] + 1;
+		} else {
+			len = split_ids[i] -1 - split_ids[i-1]; // -1 to exclude sep from the range (lower bound)
+			offset = split_ids[i-1] + 1; // +1 to exclude sep from the range (lower bound)
+		}
+		elems[i] = calloc(len, sizeof(char));
+		for (int j=0; j<len; ++j) {
+			elems[i][j] = s[offset+j];
+		}
+	}
+	free(split_ids);
+	return elems;		
+}
+
 char *ctob(const char c1) {
 	char c1c = (char)c1;
 	size_t blen = 0;
@@ -104,7 +165,7 @@ char btoc(const char *b1) {
 	return c;
 }
 
-int walk(char *path, ftree *ft) {
+int walk(char *path, ftree *ft, char *filter) { // filter expects '|' as separator
 	DIR *dp;
 	struct dirent *ep;
 	dp = opendir(path);
@@ -115,13 +176,18 @@ int walk(char *path, ftree *ft) {
 	while (path[path_size] != '\0') {
 		++path_size;
 	}
+	size_t filter_elem_count = 0;
+	char sep = '|';
+	char **filter_elems = split(filter, mystrlen(filter), sep, &filter_elem_count);
 	while (ep = readdir(dp)) {
-		if (mystrcomp(".", ep->d_name) || mystrcomp("..", ep->d_name)) {
+		if (mystrcomp(".", ep->d_name) || mystrcomp("..", ep->d_name) || 
+			contains(filter_elems, filter_elem_count, ep->d_name)) {
 			continue;
 		}
 		// MAYBE: extract to something like strcat
-		size_t new_path_size = path_size+mystrlen(ep->d_name)+1;
-		char new_path[new_path_size];
+		size_t new_path_size = path_size+mystrlen(ep->d_name)+1; // +1 for '/'
+		char new_path[new_path_size+1]; // +1 for '\0'
+		new_path[new_path_size] = '\0';
 		for (int i=0; i<new_path_size; ++i) {
 			if (i < path_size) {
 				new_path[i] = path[i];
@@ -133,7 +199,7 @@ int walk(char *path, ftree *ft) {
 		}
 		switch (ep->d_type) {
 		case DT_DIR:
-			walk(new_path, ft);
+			walk(new_path, ft, filter);
 			// MAYBE: can do without calloc?
 			ft->dirs[ft->dir_count] = calloc(new_path_size, sizeof(char));
 			for (int i=0; i<new_path_size; ++i) {
@@ -166,30 +232,30 @@ int walk(char *path, ftree *ft) {
 	(void) closedir(dp);
 }
 
-void ftree_free_list(char **lst, size_t lst_size) {
+void free_str_list(char **lst, size_t lst_size) {
 	for (int i=0; i<lst_size; ++i) {
 		free(lst[i]);
 	}
 }
 
 void ftree_free(ftree ft) {
-	ftree_free_list(ft.dirs, ft.dir_count);
-	ftree_free_list(ft.files, ft.file_count);
+	free_str_list(ft.dirs, ft.dir_count);
+	free_str_list(ft.files, ft.file_count);
 	free(ft.files);
 	free(ft.dirs);
 	free(ft.fp_lens);
 	free(ft.dp_lens);
 }
 
-void ftree_print_list(char **lst, size_t lst_size) {
+void print_str_list(char **lst, size_t lst_size) {
 	for (int i=0; i<lst_size; ++i) {
 		printf("%s\n", lst[i]);
 	}
 }
 
 void ftree_print(ftree ft) {
-	ftree_print_list(ft.dirs, ft.dir_count);
-	ftree_print_list(ft.files, ft.file_count);
+	print_str_list(ft.dirs, ft.dir_count);
+	print_str_list(ft.files, ft.file_count);
 }
 
 #endif // TOOLBOX_IMPLEMENTATION
