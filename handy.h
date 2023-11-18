@@ -120,7 +120,7 @@ int walk(char *path, ftree *ft) {
 			continue;
 		}
 		// MAYBE: extract to something like strcat
-		size_t new_path_size = path_size+ep->d_reclen+1;
+		size_t new_path_size = path_size+mystrlen(ep->d_name)+1;
 		char new_path[new_path_size];
 		for (int i=0; i<new_path_size; ++i) {
 			if (i < path_size) {

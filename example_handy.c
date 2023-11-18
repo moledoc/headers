@@ -1,5 +1,6 @@
 #define TOOLBOX_IMPLEMENTATION
 #include "./handy.h"
+#include <string.h>
 
 int main(int argc, char **argv) {
 	// shift
@@ -7,7 +8,7 @@ int main(int argc, char **argv) {
 	printf("program name='%s'\n",pname);
 
 	// mystrlen
-	printf("program name length=%d\n", mystrlen(pname));
+	printf("program name length=%d, <string.h>.strlen=%d\n", mystrlen(pname), strlen(pname));
 
 	// mystrcomp
 	printf("program name is 'incorrect_name'=%d (0 is false, 1 is true)\n", mystrcomp("incorrect_name", pname));
@@ -28,5 +29,9 @@ int main(int argc, char **argv) {
 	ftree ft = {files, fp_lens, 256, 0, dirs, dp_lens, 256, 0};
 	walk(".", &ft);
 	ftree_print(ft);
+	// check that path length are correct
+	for (int i=0; i<ft.file_count; ++i) {
+		printf("file: %s, stored length: %d, calculated length: %d, <string.h>.strlen=%d\n", ft.files[i], ft.fp_lens[i], mystrlen(ft.files[i]), strlen(ft.files[i]));
+	}
 	ftree_free(ft);
 }
