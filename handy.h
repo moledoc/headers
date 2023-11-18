@@ -27,7 +27,7 @@ typedef struct {
 	size_t dir_count; // current directory count
 } ftree;
 
-int walk(char *path, ftree *ft, char *filter);
+int walk(char *path, ftree *ft, char *filter);  // filter expects '|' as separator
 void ftree_free_list(char **lst, size_t lst_size);
 void ftree_free(ftree ft);
 void ftree_print_list(char **lst, size_t lst_size);
@@ -165,7 +165,7 @@ char btoc(const char *b1) {
 	return c;
 }
 
-int walk(char *path, ftree *ft, char *filter) {
+int walk(char *path, ftree *ft, char *filter) { // filter expects '|' as separator
 	DIR *dp;
 	struct dirent *ep;
 	dp = opendir(path);
@@ -177,7 +177,8 @@ int walk(char *path, ftree *ft, char *filter) {
 		++path_size;
 	}
 	size_t filter_elem_count = 0;
-	char **filter_elems = split(filter, mystrlen(filter), '|', &filter_elem_count);
+	char sep = '|';
+	char **filter_elems = split(filter, mystrlen(filter), sep, &filter_elem_count);
 	while (ep = readdir(dp)) {
 		if (mystrcomp(".", ep->d_name) || mystrcomp("..", ep->d_name) || 
 			contains(filter_elems, filter_elem_count, ep->d_name)) {
