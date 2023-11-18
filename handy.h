@@ -14,11 +14,14 @@ char btoc(const char *b1); // binary representation to character
 
 typedef struct {
 	char **files;
-	size_t fsize;
-	size_t file_count;
+	size_t *fp_lens; // file path lengths
+	size_t fsize; // files size
+	size_t file_count; // current file count
+	//
 	char **dirs;
-	size_t dsize;
-	size_t dir_count;
+	size_t *dp_lens; // directory path lengths
+	size_t dsize; // dirs size
+	size_t dir_count; // current directory count
 } ftree;
 
 int walk(char *path, ftree *ft);
@@ -136,10 +139,12 @@ int walk(char *path, ftree *ft) {
 			for (int i=0; i<new_path_size; ++i) {
 				ft->dirs[ft->dir_count][i] = new_path[i];
 			}
+			ft->dp_lens[ft->dir_count] = new_path_size;
 			++(ft->dir_count);
 			if (ft->dir_count > ft->dsize) {
 				ft->dsize *= 2;
 				ft->dirs = realloc(ft->dirs, ft->dsize);
+				ft->dp_lens = realloc(ft->dp_lens, ft->dsize);
 			}
 			break;
 		case DT_REG:
@@ -148,10 +153,12 @@ int walk(char *path, ftree *ft) {
 			for (int i=0; i<new_path_size; ++i) {
 				ft->files[ft->file_count][i] = new_path[i];
 			}
+			ft->fp_lens[ft->file_count] = new_path_size;
 			++(ft->file_count);
 			if (ft->file_count > ft->fsize) {
 				ft->fsize *= 2;
 				ft->files = realloc(ft->files, ft->fsize);
+				ft->fp_lens = realloc(ft->fp_lens, ft->fsize);
 			}
 			break;
 		}
@@ -170,6 +177,8 @@ void ftree_free(ftree ft) {
 	ftree_free_list(ft.files, ft.file_count);
 	free(ft.files);
 	free(ft.dirs);
+	free(ft.fp_lens);
+	free(ft.dp_lens);
 }
 
 void ftree_print_list(char **lst, size_t lst_size) {

@@ -23,7 +23,9 @@ int main(int argc, char **argv) {
 	// walk
 	char **files = calloc(256, sizeof(char *));
 	char **dirs = calloc(256, sizeof(char *));
-	ftree ft = {files, 256, 0, dirs, 256, 0};
+	size_t *fp_lens = calloc(256, sizeof(size_t));
+	size_t *dp_lens = calloc(256, sizeof(size_t));
+	ftree ft = {files, fp_lens, 256, 0, dirs, dp_lens, 256, 0};
 	walk(".", &ft);
 	ftree_print(ft);
 	ftree_free(ft);
