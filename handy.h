@@ -11,7 +11,7 @@ int mystrcomp(const char *s1, const char *s2);
 void mymemset(char *buf, int v, size_t size);
 void mymemcpy(char *dest, char *src, size_t size);
 char **split(char *s, size_t slen, char sep, size_t *elem_count);
-int contains(char **ss, char *s);
+int contains(char **ss, size_t sslen, char *s);
 char *ctob(const char c1); // character to binary representation
 char btoc(const char *b1); // binary representation to character
 
@@ -27,7 +27,7 @@ typedef struct {
 	size_t dir_count; // current directory count
 } ftree;
 
-int walk(char *path, ftree *ft);
+int walk(char *path, ftree *ft, char *filter);
 void ftree_free_list(char **lst, size_t lst_size);
 void ftree_free(ftree ft);
 void ftree_print_list(char **lst, size_t lst_size);
@@ -82,6 +82,15 @@ void mymemcpy(char *dest, char *src, size_t size) {
 	for (int i=0; i<size; ++i) {
 		dest[i] = src[i];
 	}
+}
+
+int contains(char **ss, size_t sslen, char *s) {
+	for (int i=0; i<sslen; ++i) {
+		if (!mystrcomp(ss[i], s)) {
+			return 0;
+		}
+	}
+	return 1;
 }
 
 char **split(char *s, size_t slen, char sep, size_t *elem_count) {
@@ -156,7 +165,7 @@ char btoc(const char *b1) {
 	return c;
 }
 
-int walk(char *path, ftree *ft) { // , char *filter
+int walk(char *path, ftree *ft, char *filter) {
 	DIR *dp;
 	struct dirent *ep;
 	dp = opendir(path);
@@ -167,8 +176,11 @@ int walk(char *path, ftree *ft) { // , char *filter
 	while (path[path_size] != '\0') {
 		++path_size;
 	}
+	size_t filter_elem_count = 0;
+	char **filter_elems = split(filter, mystrlen(filter), '|', &filter_elem_count);
 	while (ep = readdir(dp)) {
-		if (mystrcomp(".", ep->d_name) || mystrcomp("..", ep->d_name)) {
+		if (mystrcomp(".", ep->d_name) || mystrcomp("..", ep->d_name) || 
+			contains(filter_elems, filter_elem_count, ep->d_name)) {
 			continue;
 		}
 		// MAYBE: extract to something like strcat
@@ -185,7 +197,7 @@ int walk(char *path, ftree *ft) { // , char *filter
 		}
 		switch (ep->d_type) {
 		case DT_DIR:
-			walk(new_path, ft);
+			walk(new_path, ft, filter);
 			// MAYBE: can do without calloc?
 			ft->dirs[ft->dir_count] = calloc(new_path_size, sizeof(char));
 			for (int i=0; i<new_path_size; ++i) {
