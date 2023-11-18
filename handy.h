@@ -9,6 +9,9 @@ char *shift(int *argc, char ***argv);
 size_t mystrlen(const char *s1);
 int mystrcomp(const char *s1, const char *s2);
 void mymemset(char *buf, int v, size_t size);
+void mymemcpy(char *dest, char *src, size_t size);
+char **split(char *s, size_t slen, char sep, size_t *elem_count);
+int contains(char **ss, char *s);
 char *ctob(const char c1); // character to binary representation
 char btoc(const char *b1); // binary representation to character
 
@@ -75,6 +78,12 @@ void mymemset(char *buf, int v, size_t size) {
 	}
 }
 
+void mymemcpy(char *dest, char *src, size_t size) {
+	for (int i=0; i<size; ++i) {
+		dest[i] = src[i];
+	}
+}
+
 char **split(char *s, size_t slen, char sep, size_t *elem_count) {
 	int split_size = 256;
 	int *split_ids = calloc(split_size, sizeof(int));
@@ -91,6 +100,11 @@ char **split(char *s, size_t slen, char sep, size_t *elem_count) {
 	}
 	*elem_count = split_count + 1;
 	char **elems = calloc(*elem_count, sizeof(char *));
+	if (*elem_count == 1) {
+		elems[0] = calloc(slen, sizeof(char));
+		mymemcpy(elems[0], s, slen);
+		return elems;
+	}
 	for (int i=0; i<split_count+1; ++i) {
 		int len;
 		int offset;

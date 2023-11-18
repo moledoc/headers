@@ -29,6 +29,14 @@ int main(int argc, char **argv) {
 	print_str_list(elems, elem_count);
 	free_str_list(elems, elem_count);
 
+	elem_count = 0;
+	filter = ".git";
+	elems = split(filter, mystrlen(filter), '|', &elem_count);
+	printf("splitting '%s':\n", filter);
+	print_str_list(elems, elem_count);
+	free_str_list(elems, elem_count);
+
+
 	// walk
 	char *root = ".";
 	printf("Walking directory '%s':\n", root);
