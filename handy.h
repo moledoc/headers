@@ -185,7 +185,8 @@ int walk(char *path, ftree *ft, char *filter) {
 		}
 		// MAYBE: extract to something like strcat
 		size_t new_path_size = path_size+mystrlen(ep->d_name)+1;
-		char new_path[new_path_size];
+		char new_path[new_path_size+1];
+		new_path[new_path_size] = '\0';
 		for (int i=0; i<new_path_size; ++i) {
 			if (i < path_size) {
 				new_path[i] = path[i];

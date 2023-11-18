@@ -44,7 +44,7 @@ int main(int argc, char **argv) {
 	free_str_list(elems, elem_count);
 
 	// walk
-	char *root = "/home/utt/c";
+	char *root = ".";
 	printf("Walking directory '%s':\n", root);
 	char **files = calloc(256, sizeof(char *));
 	char **dirs = calloc(256, sizeof(char *));
