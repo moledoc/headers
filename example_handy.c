@@ -26,5 +26,9 @@ int main(int argc, char **argv) {
 	ftree ft = {files, 256, 0, dirs, 256, 0};
 	walk(".", &ft);
 	ftree_print(ft);
+<<<<<<< Updated upstream
 	//ftree_free(ft);
+=======
+	ftree_free(ft);
+>>>>>>> Stashed changes
 }
