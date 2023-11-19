@@ -19,6 +19,7 @@ int main(int argc, char **argv) {
 		char bc = btoc(cb);
 		printf("character '%c' (as int '%d') as binary representation: '%s'\n", c, c, cb);
 		printf("binary representation of '%s' as char '%c' (as int '%d')\n", cb, bc, bc);
+		free(cb);
 	}
 
 	// split
@@ -44,24 +45,15 @@ int main(int argc, char **argv) {
 	free_str_list(elems, elem_count);
 
 	// walk
-	char *root = "/home/utt/c"; // FIXME: when root is /home/utt/go
+	char *root = "/home/utt/go"; // FIXME: prints junk at the end, even though walker contains correct data
 	printf("Walking directory '%s':\n", root);
-	int size = 2;
-	char **files = calloc(size, sizeof(char *));
-	char **dirs = calloc(size, sizeof(char *));
-	size_t *fp_lens = calloc(size, sizeof(size_t));
-	size_t *dp_lens = calloc(size, sizeof(size_t));
-	ftree ft = {files, fp_lens, size, 0, dirs, dp_lens, size, 0};
-	
-	elem_count = 0;
-	char *filter_str = ".git";
-	elems = split(filter_str, mystrlen(filter_str), '|', &elem_count);
-	filter flt = {elems, 1};
-	walk(root, mystrlen(root), &ft, flt);
+	ftree *ft = malloc(sizeof(ft));
+	walk(root, ".git", ft);
+
 	ftree_print(ft);
 	// check that path length are correct
-	for (int i=0; i<ft.file_count; ++i) {
-		printf("file: %s, stored length: %d, calculated length: %d, <string.h>.strlen=%d\n", ft.files[i], ft.fp_lens[i], mystrlen(ft.files[i]), strlen(ft.files[i]));
+	for (int i=0; i<ft->cur_files_count; ++i) {
+		printf("file: %s, stored length: %d, calculated length: %d, <string.h>.strlen=%d\n", ft->files[i], ft->fp_lens[i], mystrlen(ft->files[i]), strlen(ft->files[i]));
 	}
-	ftree_free(ft);
+	free(ft);
 }
