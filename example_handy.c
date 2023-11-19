@@ -23,35 +23,41 @@ int main(int argc, char **argv) {
 
 	// split
 	size_t elem_count = 0;
-	char *filter = ".git|test";
-	char **elems = split(filter, mystrlen(filter), '|', &elem_count);
-	printf("splitting '%s':\n", filter);
+	char *split_me = ".git|test";
+	char **elems = split(split_me, mystrlen(split_me), '|', &elem_count);
+	printf("splitting '%s':\n", split_me);
 	print_str_list(elems, elem_count);
 	free_str_list(elems, elem_count);
 
 	elem_count = 0;
-	filter = ".git";
-	elems = split(filter, mystrlen(filter), '|', &elem_count);
-	printf("splitting '%s':\n", filter);
+	split_me = ".git";
+	elems = split(split_me, mystrlen(split_me), '|', &elem_count);
+	printf("splitting '%s':\n", split_me);
 	print_str_list(elems, elem_count);
 	free_str_list(elems, elem_count);
 
 	elem_count = 0;
-	filter = "";
-	elems = split(filter, mystrlen(filter), '|', &elem_count);
-	printf("splitting '%s':\n", filter);
+	split_me = "";
+	elems = split(split_me, mystrlen(split_me), '|', &elem_count);
+	printf("splitting '%s':\n", split_me);
 	print_str_list(elems, elem_count);
 	free_str_list(elems, elem_count);
 
 	// walk
-	char *root = "."; // FIXME: when root is /home/utt/go
+	char *root = "/home/utt/c"; // FIXME: when root is /home/utt/go
 	printf("Walking directory '%s':\n", root);
-	char **files = calloc(256, sizeof(char *));
-	char **dirs = calloc(256, sizeof(char *));
-	size_t *fp_lens = calloc(256, sizeof(size_t));
-	size_t *dp_lens = calloc(256, sizeof(size_t));
-	ftree ft = {files, fp_lens, 256, 0, dirs, dp_lens, 256, 0};
-	walk(root, &ft, ".git");
+	int size = 2;
+	char **files = calloc(size, sizeof(char *));
+	char **dirs = calloc(size, sizeof(char *));
+	size_t *fp_lens = calloc(size, sizeof(size_t));
+	size_t *dp_lens = calloc(size, sizeof(size_t));
+	ftree ft = {files, fp_lens, size, 0, dirs, dp_lens, size, 0};
+	
+	elem_count = 0;
+	char *filter_str = ".git";
+	elems = split(filter_str, mystrlen(filter_str), '|', &elem_count);
+	filter flt = {elems, 1};
+	walk(root, mystrlen(root), &ft, flt);
 	ftree_print(ft);
 	// check that path length are correct
 	for (int i=0; i<ft.file_count; ++i) {

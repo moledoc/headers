@@ -5,15 +5,10 @@
 
 #include <stdio.h>
 
-char *shift(int *argc, char ***argv);
-size_t mystrlen(const char *s1);
-int mystrcomp(const char *s1, const char *s2);
-void mymemset(char *buf, int v, size_t size);
-void mymemcpy(char *dest, char *src, size_t size);
-char **split(char *s, size_t slen, char sep, size_t *elem_count);
-int contains(char **ss, size_t sslen, char *s);
-char *ctob(const char c1); // character to binary representation
-char btoc(const char *b1); // binary representation to character
+typedef struct {
+	char **elems;
+	size_t size;
+} filter;
 
 typedef struct {
 	char **files;
@@ -27,11 +22,22 @@ typedef struct {
 	size_t dir_count; // current directory count
 } ftree;
 
-int walk(char *path, ftree *ft, char *filter);  // filter expects '|' as separator
-void ftree_free_list(char **lst, size_t lst_size);
+char *shift(int *argc, char ***argv);
+void print_str_list(char **lst, size_t lst_size);
+void free_str_list(char **lst, size_t lst_size);
+size_t mystrlen(const char *s1);
+int mystrcomp(const char *s1, const char *s2);
+void mymemset(char *buf, int v, size_t size);
+void mymemcpy(char *dest, char *src, size_t size);
+int contains(char **ss, size_t sslen, char *s);
+char **split(char *s, size_t slen, char sep, size_t *elem_count);
+char *ctob(const char c1); // character to binary representation
+char btoc(const char *b1); // binary representation to character
+char **reloc(char **src, size_t *size); // REVIEWME: (and it's usages)
+int walk(char *path, size_t path_size, ftree *ft, filter flt);
 void ftree_free(ftree ft);
-void ftree_print_list(char **lst, size_t lst_size);
 void ftree_print(ftree ft);
+
 
 #endif // TOOLBOX_H_
 
@@ -48,6 +54,24 @@ char *shift(int *argc, char ***argv) {
 	*argc -= 1;
 	*argv += 1;
 	return result;
+}
+
+void print_str_list(char **lst, size_t lst_size) {
+	for (int i=0; i<lst_size; ++i) {
+		printf("%s\n", lst[i]);
+	}
+}
+
+void free_str_list(char **lst, size_t lst_size) {
+	for (int i=0; i<lst_size; ++i) {
+		if (lst[i] != NULL) {
+			continue;
+		}
+		free(lst[i]);
+	}
+	if (lst) {
+		free(lst);
+	}
 }
 
 size_t mystrlen(const char *s1) {
@@ -136,7 +160,7 @@ char **split(char *s, size_t slen, char sep, size_t *elem_count) {
 	return elems;		
 }
 
-char *ctob(const char c1) {
+char *ctob(const char c1) { // character to binary representation
 	char c1c = (char)c1;
 	size_t blen = 0;
 	while ( c1c >>= 1 > 0) {
@@ -152,7 +176,7 @@ char *ctob(const char c1) {
 	return b;	
 }
 
-char btoc(const char *b1) {
+char btoc(const char *b1) { // binary representation to character
 	char *b1c = (char *)b1;
 	int blen = mystrlen(b1c);
 	int pow = 2;
@@ -165,65 +189,56 @@ char btoc(const char *b1) {
 	return c;
 }
 
-int walk(char *path, ftree *ft, char *filter) { // filter expects '|' as separator
+char **reloc(char **src, size_t *size) { // REVIEWME: (and it's usages)
+	char **dest = malloc(*size * 2 * sizeof(char *));
+	for (int i=0; i<*size; ++i) {
+		dest[i] = src[i];
+	}
+	free_str_list(src, *size);
+	*size *= 2;
+	return dest;
+}
+
+int walk(char *path, size_t path_size, ftree *ft, filter flt) {
 	DIR *dp;
 	struct dirent *ep;
 	dp = opendir(path);
 	if (!dp) {
 		return 0;
 	}
-	size_t path_size = 0;
-	while (path[path_size] != '\0') {
-		++path_size;
-	}
 	size_t filter_elem_count = 0;
-	char sep = '|';
-	char **filter_elems = split(filter, mystrlen(filter), sep, &filter_elem_count);
 	while (ep = readdir(dp)) {
 		if (mystrcomp(".", ep->d_name) || mystrcomp("..", ep->d_name) || 
-			contains(filter_elems, filter_elem_count, ep->d_name)) {
+			contains(flt.elems, flt.size, ep->d_name)) {
 			continue;
 		}
-		// MAYBE: extract to something like strcat
-		size_t new_path_size = path_size+mystrlen(ep->d_name)+1; // +1 for '/'
-		char new_path[new_path_size+1]; // +1 for '\0'
-		new_path[new_path_size] = '\0';
-		for (int i=0; i<new_path_size; ++i) {
-			if (i < path_size) {
-				new_path[i] = path[i];
-			} else if (i == path_size) {
-				new_path[i] = '/';
-			} else {
-				new_path[i] = ep->d_name[i-1-path_size];
-			}
-		}
+		size_t ep_name_len = mystrlen(ep->d_name);
+		size_t new_path_size = path_size+ep_name_len+1;
+		char *new_path = calloc(new_path_size, sizeof(char));
+
+		mymemcpy(new_path, path, path_size);
+		mymemcpy(new_path + (path_size+1), ep->d_name, ep_name_len);
+		new_path[path_size] = '/';
+
 		switch (ep->d_type) {
 		case DT_DIR:
-			walk(new_path, ft, filter);
+			walk(new_path, new_path_size, ft, flt);
 			// MAYBE: can do without calloc?
-			ft->dirs[ft->dir_count] = calloc(new_path_size, sizeof(char));
-			for (int i=0; i<new_path_size; ++i) {
-				ft->dirs[ft->dir_count][i] = new_path[i];
-			}
+			ft->dirs[ft->dir_count] = new_path;
 			ft->dp_lens[ft->dir_count] = new_path_size;
 			++(ft->dir_count);
-			if (ft->dir_count > ft->dsize) {
-				ft->dsize *= 2;
-				ft->dirs = realloc(ft->dirs, ft->dsize);
+			if (ft->dir_count >= ft->dsize) {
+				ft->dirs = reloc(ft->dirs, &ft->dsize);
 				ft->dp_lens = realloc(ft->dp_lens, ft->dsize);
 			}
 			break;
 		case DT_REG:
 			// MAYBE: can do without calloc?
-			ft->files[ft->file_count] = calloc(new_path_size, sizeof(char));
-			for (int i=0; i<new_path_size; ++i) {
-				ft->files[ft->file_count][i] = new_path[i];
-			}
+			ft->files[ft->file_count] = new_path;
 			ft->fp_lens[ft->file_count] = new_path_size;
 			++(ft->file_count);
-			if (ft->file_count > ft->fsize) {
-				ft->fsize *= 2;
-				ft->files = realloc(ft->files, ft->fsize);
+			if (ft->file_count >= ft->fsize) {
+				ft->files = reloc(ft->files, &ft->fsize);
 				ft->fp_lens = realloc(ft->fp_lens, ft->fsize);
 			}
 			break;
@@ -232,25 +247,11 @@ int walk(char *path, ftree *ft, char *filter) { // filter expects '|' as separat
 	(void) closedir(dp);
 }
 
-void free_str_list(char **lst, size_t lst_size) {
-	for (int i=0; i<lst_size; ++i) {
-		free(lst[i]);
-	}
-}
-
 void ftree_free(ftree ft) {
 	free_str_list(ft.dirs, ft.dir_count);
 	free_str_list(ft.files, ft.file_count);
-	free(ft.files);
-	free(ft.dirs);
 	free(ft.fp_lens);
 	free(ft.dp_lens);
-}
-
-void print_str_list(char **lst, size_t lst_size) {
-	for (int i=0; i<lst_size; ++i) {
-		printf("%s\n", lst[i]);
-	}
 }
 
 void ftree_print(ftree ft) {
