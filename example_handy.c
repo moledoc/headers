@@ -19,43 +19,38 @@ int main(int argc, char **argv) {
 		char bc = btoc(cb);
 		printf("character '%c' (as int '%d') as binary representation: '%s'\n", c, c, cb);
 		printf("binary representation of '%s' as char '%c' (as int '%d')\n", cb, bc, bc);
+		free(cb);
 	}
 
 	// split
-	size_t elem_count = 0;
-	char *filter = ".git|test";
-	char **elems = split(filter, mystrlen(filter), '|', &elem_count);
-	printf("splitting '%s':\n", filter);
-	print_str_list(elems, elem_count);
-	free_str_list(elems, elem_count);
-
-	elem_count = 0;
-	filter = ".git";
-	elems = split(filter, mystrlen(filter), '|', &elem_count);
-	printf("splitting '%s':\n", filter);
-	print_str_list(elems, elem_count);
-	free_str_list(elems, elem_count);
-
-	elem_count = 0;
-	filter = "";
-	elems = split(filter, mystrlen(filter), '|', &elem_count);
-	printf("splitting '%s':\n", filter);
-	print_str_list(elems, elem_count);
-	free_str_list(elems, elem_count);
+	char split_me[3][32];
+	mymemcpy(split_me[0], "", 0);
+	mymemcpy(split_me[1], ".git", 4);
+	mymemcpy(split_me[2], ".git|test1", 10);
+	mymemcpy(split_me[3], ".git|test|tst2", 14);
+	for (int i=0; i<4; ++i) {
+		printf("Spliting '%s'\n", split_me[i]);
+		char **elems = NULL;
+		size_t elems_count = split(split_me[i], '|', &elems);
+		print_str_list(elems, elems_count);
+		free_str_list(elems, elems_count);
+	}
 
 	// walk
-	char *root = "."; // FIXME: when root is /home/utt/go
+	char *root = ".";
+	filter flt;
+	mk_filter(".git", '|', &flt);
+	ftree ft;
+	mk_ftree(&ft, 32);
 	printf("Walking directory '%s':\n", root);
-	char **files = calloc(256, sizeof(char *));
-	char **dirs = calloc(256, sizeof(char *));
-	size_t *fp_lens = calloc(256, sizeof(size_t));
-	size_t *dp_lens = calloc(256, sizeof(size_t));
-	ftree ft = {files, fp_lens, 256, 0, dirs, dp_lens, 256, 0};
-	walk(root, &ft, ".git");
-	ftree_print(ft);
+	ftree_walk(root, mystrlen(root), &ft, &flt,-1);
+	free_str_list(flt.elems, flt.count);
+
+	ftree_print(&ft);
 	// check that path length are correct
-	for (int i=0; i<ft.file_count; ++i) {
+	for (int i=0; i<ft.cur_files_count; ++i) {
+		// continue;
 		printf("file: %s, stored length: %d, calculated length: %d, <string.h>.strlen=%d\n", ft.files[i], ft.fp_lens[i], mystrlen(ft.files[i]), strlen(ft.files[i]));
 	}
-	ftree_free(ft);
+	ftree_free(&ft);
 }
