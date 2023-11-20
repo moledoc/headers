@@ -26,7 +26,7 @@ int main(int argc, char **argv) {
 	char split_me[3][32];
 	mymemcpy(split_me[0], "", 0);
 	mymemcpy(split_me[1], ".git", 4);
-	mymemcpy(split_me[2], ".git|test", 9);
+	mymemcpy(split_me[2], ".git|test1", 10);
 	mymemcpy(split_me[3], ".git|test|tst2", 14);
 	for (int i=0; i<4; ++i) {
 		printf("Spliting '%s'\n", split_me[i]);
@@ -37,10 +37,10 @@ int main(int argc, char **argv) {
 	}
 
 	// walk
-	char *root = "/home/utt/go"; // FIXME: prints junk at the end, even though walker contains correct data
+	char *root = ".";
 	printf("Walking directory '%s':\n", root);
 	ftree *ft = NULL;
-	walk(root, ".git", &ft, 3);
+	walk(root, ".git", &ft, -1);
 
 	ftree_print(ft);
 	// check that path length are correct
