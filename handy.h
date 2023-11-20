@@ -22,23 +22,22 @@ typedef struct {
 	size_t cur_dirs_count; // current directory count
 } ftree;
 
-// char *shift(int *argc, char ***argv);
-// void print_str_list(char **lst, size_t lst_size);
-// void free_str_list(char **lst, size_t lst_size);
-// size_t mystrlen(const char *s1);
-// int mystrcomp(const char *s1, const char *s2);
-// void mymemset(char *buf, int v, size_t size);
-// void mymemcpy(char *dest, char *src, size_t size);
-// int contains(char **ss, size_t sslen, char *s);
-// // char **split(char *s, size_t slen, char sep, size_t *elem_count);
-// void split(char *s, size_t slen, char sep, char ***filter_elems, size_t *elem_count);
-// char *ctob(const char c1); // character to binary representation
-// char btoc(const char *b1); // binary representation to character
-// void _walk_counter(char *path, size_t path_size, size_t *files_count, size_t *dirs_count, filter flt);
-// void _walker(char *path, size_t path_size, ftree *ft, filter flt);
-// void walk(char *path, char* filter_str, ftree *); // '|' is used as sep in filter_str
-// void ftree_free(ftree *ft);
-// void ftree_print(ftree *ft);
+char *shift(int *argc, char ***argv);
+void print_str_list(char **lst, size_t lst_size);
+void free_str_list(char **lst, size_t lst_size);
+size_t mystrlen(const char *s1);
+int mystrcomp(const char *s1, const char *s2);
+void mymemset(char *buf, int v, size_t size);
+void mymemcpy(char *dest, char *src, size_t size);
+int contains(char **ss, size_t sslen, char *s);
+size_t split(char *s, char sep, char ***elems);
+char *ctob(const char c1); // character to binary representation
+char btoc(const char *b1); // binary representation to character
+void _walker(char *path, size_t path_size, ftree *ft, filter flt);
+void walk(char *path, char* filter_str, ftree **ft_o); // '|' is used as sep in filter_str
+void ftree_free(ftree *ft);
+void ftree_print(ftree *ft);
+
 
 #endif // TOOLBOX_H_
 
@@ -173,113 +172,75 @@ char btoc(const char *b1) { // binary representation to character
 	return c;
 }
 
-// void _walk_counter(char *path, size_t path_size, size_t *files_count, size_t *dirs_count, filter flt) {
-// 	DIR *dp;
-// 	struct dirent *ep;
-// 	dp = opendir(path);
-// 	if (!dp) {
-// 		return;
-// 	}
-// 	while (ep = readdir(dp)) {
-// 		if (mystrcomp(".", ep->d_name) || mystrcomp("..", ep->d_name) || 
-// 			contains(flt.elems, flt.size, ep->d_name)) {
-// 			continue;
-// 		}
-// 		size_t ep_name_len = mystrlen(ep->d_name);
-// 		size_t new_path_size = path_size+ep_name_len+1;
-// 		char new_path[new_path_size+1];
-// 		new_path[new_path_size] = '\0';
-// 
-// 		mymemcpy(new_path, path, path_size);
-// 		new_path[path_size] = '/';
-// 		mymemcpy(new_path + (path_size+1), ep->d_name, ep_name_len);
-// 
-// 		switch (ep->d_type) {
-// 		case DT_DIR:
-// 			++(*dirs_count);
-// 			_walk_counter(new_path, new_path_size, files_count, dirs_count, flt);
-// 			break;
-// 		case DT_REG:
-// 			++(*files_count);
-// 			break;
-// 		}
-// 	}
-// 	(void) closedir(dp);
-// }
-// 
-// void _walker(char *path, size_t path_size, ftree *ft, filter flt) {
-// 	DIR *dp;
-// 	struct dirent *ep;
-// 	dp = opendir(path);
-// 	if (!dp) {
-// 		return;
-// 	}
-// 	while (ep = readdir(dp)) {
-// 		if (mystrcomp(".", ep->d_name) || mystrcomp("..", ep->d_name) || 
-// 			contains(flt.elems, flt.size, ep->d_name)) {
-// 			continue;
-// 		}
-// 		size_t ep_name_len = mystrlen(ep->d_name);
-// 		size_t new_path_size = path_size+ep_name_len+1;
-// 		char new_path[new_path_size+1];
-// 		new_path[new_path_size] = '\0';
-// 
-// 		mymemcpy(new_path, path, path_size);
-// 		new_path[path_size] = '/';
-// 		mymemcpy(new_path + (path_size+1), ep->d_name, ep_name_len);
-// 
-// 		switch (ep->d_type) {
-// 		case DT_DIR:
-// 			ft->dirs[ft->cur_dirs_count] = calloc(new_path_size+1, sizeof(char));
-// 			ft->dirs[ft->cur_dirs_count][new_path_size] = '\0';
-// 			for (int i=0; i<new_path_size; ++i) {
-// 				ft->dirs[ft->cur_dirs_count][i] = new_path[i];
-// 			}
-// 			ft->dp_lens[ft->cur_dirs_count] = new_path_size;
-// 			++(ft->cur_dirs_count);
-// 			_walker(new_path, new_path_size, ft, flt);
-// 			break;
-// 		case DT_REG:
-// 			ft->files[ft->cur_files_count] = calloc(new_path_size+1, sizeof(char));
-// 			ft->files[ft->cur_files_count][new_path_size] = '\0';
-// 			for (int i=0; i<new_path_size; ++i) {
-// 				ft->files[ft->cur_files_count][i] = new_path[i];
-// 			}
-// 			ft->fp_lens[ft->cur_files_count] = new_path_size;
-// 			++(ft->cur_files_count);
-// 			break;
-// 		}
-// 	}
-// 	(void) closedir(dp);
-// }
-// 
-// void walk(char *path, char* filter_str, ftree *ft) { // '|' is used as sep in filter_str
-// 	size_t filter_elems_count = 0;
-// 	// char **filter_elems = split(filter_str, mystrlen(filter_str), '|', &filter_elems_count);
-// 	char ***filter_elems;
-// 	split(filter_str, mystrlen(filter_str), '|', filter_elems, &filter_elems_count)
-// 	filter flt = {filter_elems, filter_elems_count};
-// 
-// 	size_t files_count = 0;
-// 	size_t dirs_count = 0;
-// 	size_t path_len = mystrlen(path);
-// 	_walk_counter(path, path_len, &files_count, &dirs_count, flt);
-// 
-// 	char *files[files_count];
-// 	char *dirs[files_count];
-// 	size_t fp_lens[files_count];
-// 	size_t dp_lens[dirs_count];
-// 	ft->files = files;
-// 	ft->fp_lens = fp_lens;
-// 	ft->fsize = files_count;
-// 	ft->cur_files_count = 0;
-// 	ft->dirs = dirs;
-// 	ft->dp_lens = dp_lens;
-// 	ft->dsize = dirs_count;
-// 	ft->cur_dirs_count = 0;
-// 	_walker(path, path_len, ft, flt);
-// 	free_str_list(filter_elems, filter_elems_count);
-// }
+void _walker(char *path, size_t path_size, ftree *ft, filter flt) {
+	DIR *dp;
+	struct dirent *ep;
+	dp = opendir(path);
+	if (!dp) {
+		return;
+	}
+	while (ep = readdir(dp)) {
+		if (mystrcomp(".", ep->d_name) || mystrcomp("..", ep->d_name) || 
+			contains(flt.elems, flt.size, ep->d_name)) {
+			continue;
+		}
+		size_t ep_name_len = mystrlen(ep->d_name);
+		size_t new_path_size = path_size+ep_name_len+1;
+		char *new_path = calloc(new_path_size+1, sizeof(char));
+		new_path[new_path_size] = '\0';
+
+		mymemcpy(new_path, path, path_size);
+		new_path[path_size] = '/';
+		mymemcpy(new_path + (path_size+1), ep->d_name, ep_name_len);
+
+		switch (ep->d_type) {
+		case DT_DIR:
+			ft->dirs[ft->cur_dirs_count] = new_path;
+			ft->dp_lens[ft->cur_dirs_count] = new_path_size;
+			++(ft->cur_dirs_count);
+			if (ft->cur_dirs_count >= ft->dsize) {
+				ft->dsize += 32;
+				ft->dirs = realloc(ft->dirs, ft->dsize*sizeof(char *));
+				ft->dp_lens = realloc(ft->dp_lens, ft->dsize*sizeof(size_t));
+			}
+			_walker(new_path, new_path_size, ft, flt);
+			break;
+		case DT_REG:
+			ft->files[ft->cur_files_count] = new_path;
+			ft->fp_lens[ft->cur_files_count] = new_path_size;
+			++(ft->cur_files_count);
+			if (ft->cur_files_count >= ft->fsize) {
+				ft->fsize += 32;
+				ft->files = realloc(ft->files, ft->fsize*sizeof(char *));
+				ft->fp_lens = realloc(ft->fp_lens, ft->fsize*sizeof(size_t));
+			}
+			break;
+		}
+	}
+	(void) closedir(dp);
+}
+
+void walk(char *path, char* filter_str, ftree **ft_o) { // '|' is used as sep in filter_str
+	char **filter_elems;
+	size_t filter_elems_count = split(filter_str, '|', &filter_elems);
+	filter flt = {filter_elems, filter_elems_count};
+
+	ftree *ft = calloc(1, sizeof(ftree));
+	size_t size = 32;
+	ft->files = malloc(size*sizeof(char *));
+	ft->dirs = malloc(size*sizeof(char *));
+	ft->fp_lens = malloc(size*sizeof(size_t));
+	ft->dp_lens = malloc(size*sizeof(size_t));
+	ft->fsize = size;
+	ft->cur_files_count = 0;
+	ft->dsize = size;
+	ft->cur_dirs_count = 0;
+
+	_walker(path, mystrlen(path), ft, flt);
+
+	free_str_list(filter_elems, filter_elems_count);
+	*ft_o = ft;
+}
 
 void ftree_free(ftree *ft) {
 	free_str_list(ft->dirs, ft->cur_dirs_count);
@@ -288,6 +249,8 @@ void ftree_free(ftree *ft) {
 	ft->fp_lens = NULL;
 	free(ft->dp_lens);
 	ft->dp_lens = NULL;
+	free(ft);
+	ft = NULL;
 }
 
 void ftree_print(ftree *ft) {
