@@ -33,11 +33,10 @@ int contains(char **ss, size_t sslen, char *s);
 size_t split(char *s, char sep, char ***elems);
 char *ctob(const char c1); // character to binary representation
 char btoc(const char *b1); // binary representation to character
-void _walker(char *path, size_t path_size, ftree *ft, filter flt);
-void walk(char *path, char* filter_str, ftree **ft_o); // '|' is used as sep in filter_str
+void _walker(char *path, size_t path_size, ftree *ft, filter flt, int depth); // depth < 0 means all
+void walk(char *path, char* filter_str, ftree **ft_o, int depth); // '|' is used as sep in filter_str; depth < 0 means all
 void ftree_free(ftree *ft);
 void ftree_print(ftree *ft);
-
 
 #endif // TOOLBOX_H_
 
@@ -172,7 +171,10 @@ char btoc(const char *b1) { // binary representation to character
 	return c;
 }
 
-void _walker(char *path, size_t path_size, ftree *ft, filter flt) {
+void _walker(char *path, size_t path_size, ftree *ft, filter flt, int depth) { // depth < 0 means all
+	if (depth == 0) {
+		return;
+	}
 	DIR *dp;
 	struct dirent *ep;
 	dp = opendir(path);
@@ -203,7 +205,7 @@ void _walker(char *path, size_t path_size, ftree *ft, filter flt) {
 				ft->dirs = realloc(ft->dirs, ft->dsize*sizeof(char *));
 				ft->dp_lens = realloc(ft->dp_lens, ft->dsize*sizeof(size_t));
 			}
-			_walker(new_path, new_path_size, ft, flt);
+			_walker(new_path, new_path_size, ft, flt, depth-1);
 			break;
 		case DT_REG:
 			ft->files[ft->cur_files_count] = new_path;
@@ -220,7 +222,7 @@ void _walker(char *path, size_t path_size, ftree *ft, filter flt) {
 	(void) closedir(dp);
 }
 
-void walk(char *path, char* filter_str, ftree **ft_o) { // '|' is used as sep in filter_str
+void walk(char *path, char* filter_str, ftree **ft_o, int depth) { // '|' is used as sep in filter_str; depth < 0 means all
 	char **filter_elems;
 	size_t filter_elems_count = split(filter_str, '|', &filter_elems);
 	filter flt = {filter_elems, filter_elems_count};
@@ -236,7 +238,7 @@ void walk(char *path, char* filter_str, ftree **ft_o) { // '|' is used as sep in
 	ft->dsize = size;
 	ft->cur_dirs_count = 0;
 
-	_walker(path, mystrlen(path), ft, flt);
+	_walker(path, mystrlen(path), ft, flt, depth);
 
 	free_str_list(filter_elems, filter_elems_count);
 	*ft_o = ft;

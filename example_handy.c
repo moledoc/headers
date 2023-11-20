@@ -40,9 +40,9 @@ int main(int argc, char **argv) {
 	char *root = "/home/utt/go"; // FIXME: prints junk at the end, even though walker contains correct data
 	printf("Walking directory '%s':\n", root);
 	ftree *ft = NULL;
-	walk(root, ".git", &ft);
+	walk(root, ".git", &ft, 3);
 
-	// ftree_print(ft);
+	ftree_print(ft);
 	// check that path length are correct
 	for (int i=0; i<ft->cur_files_count; ++i) {
 		continue;
