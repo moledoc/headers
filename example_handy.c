@@ -38,15 +38,19 @@ int main(int argc, char **argv) {
 
 	// walk
 	char *root = ".";
+	filter flt;
+	mk_filter(".git", '|', &flt);
+	ftree ft;
+	mk_ftree(&ft, 32);
 	printf("Walking directory '%s':\n", root);
-	ftree *ft = NULL;
-	walk(root, ".git", &ft, -1);
+	ftree_walk(root, mystrlen(root), &ft, &flt,-1);
+	free_str_list(flt.elems, flt.count);
 
-	ftree_print(ft);
+	ftree_print(&ft);
 	// check that path length are correct
-	for (int i=0; i<ft->cur_files_count; ++i) {
-		continue;
-		printf("file: %s, stored length: %d, calculated length: %d, <string.h>.strlen=%d\n", ft->files[i], ft->fp_lens[i], mystrlen(ft->files[i]), strlen(ft->files[i]));
+	for (int i=0; i<ft.cur_files_count; ++i) {
+		// continue;
+		printf("file: %s, stored length: %d, calculated length: %d, <string.h>.strlen=%d\n", ft.files[i], ft.fp_lens[i], mystrlen(ft.files[i]), strlen(ft.files[i]));
 	}
-	ftree_free(ft);
+	ftree_free(&ft);
 }

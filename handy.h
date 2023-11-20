@@ -7,7 +7,7 @@
 
 typedef struct {
 	char **elems;
-	size_t size;
+	size_t count;
 } filter;
 
 typedef struct {
@@ -33,10 +33,11 @@ int contains(char **ss, size_t sslen, char *s);
 size_t split(char *s, char sep, char ***elems);
 char *ctob(const char c1); // character to binary representation
 char btoc(const char *b1); // binary representation to character
-void _walker(char *path, size_t path_size, ftree *ft, filter flt, int depth); // depth < 0 means all
-void walk(char *path, char* filter_str, ftree **ft_o, int depth); // '|' is used as sep in filter_str; depth < 0 means all
+void mk_filter(char *filter_str, char sep, filter *flt_o);
+void mk_ftree(ftree *ft, size_t arr_size);
 void ftree_free(ftree *ft);
 void ftree_print(ftree *ft);
+void ftree_walk(char *path, size_t path_size, ftree *ft, filter *flt, int depth); // filter: what paths are ignored; depth < 0 means all
 
 #endif // TOOLBOX_H_
 
@@ -163,7 +164,7 @@ char btoc(const char *b1) { // binary representation to character
 	int blen = mystrlen(b1c);
 	int pow = 2;
 	char c = 0;
-	for (int i=blen-1-1; i>=0; --i) { // -1: len-1; -1: handle bin repr index 0 separately
+	for (int i=blen-1-1; i>=0; --i) { // -1 for len-1; -1 for handle bin repr index 0 separately
 		c += (b1c[i] == '1') * pow;
 		pow *= 2;
 	}
@@ -171,7 +172,39 @@ char btoc(const char *b1) { // binary representation to character
 	return c;
 }
 
-void _walker(char *path, size_t path_size, ftree *ft, filter flt, int depth) { // depth < 0 means all
+void mk_filter(char *filter_str, char sep, filter *flt_o) {
+	char **filter_elems;
+	size_t filter_elems_count = split(filter_str, sep, &filter_elems);
+	filter flt = {filter_elems, filter_elems_count};
+	*flt_o = flt;	
+}
+
+void mk_ftree(ftree *ft, size_t arr_size) {
+	ft->files = malloc(arr_size*sizeof(char *));
+	ft->dirs = malloc(arr_size*sizeof(char *));
+	ft->fp_lens = malloc(arr_size*sizeof(size_t));
+	ft->dp_lens = malloc(arr_size*sizeof(size_t));
+	ft->fsize = arr_size;
+	ft->cur_files_count = 0;
+	ft->dsize = arr_size;
+	ft->cur_dirs_count = 0;
+}
+
+void ftree_free(ftree *ft) {
+	free_str_list(ft->dirs, ft->cur_dirs_count);
+	free_str_list(ft->files, ft->cur_files_count);
+	free(ft->fp_lens); 
+	ft->fp_lens = NULL;
+	free(ft->dp_lens);
+	ft->dp_lens = NULL;
+}
+
+void ftree_print(ftree *ft) {
+	print_str_list(ft->dirs, ft->cur_dirs_count);
+	print_str_list(ft->files, ft->cur_files_count);
+}
+
+void ftree_walk(char *path, size_t path_size, ftree *ft, filter *flt, int depth) { // filter: what paths are ignored; depth < 0 means all
 	if (depth == 0) {
 		return;
 	}
@@ -183,7 +216,7 @@ void _walker(char *path, size_t path_size, ftree *ft, filter flt, int depth) { /
 	}
 	while (ep = readdir(dp)) {
 		if (mystrcomp(".", ep->d_name) || mystrcomp("..", ep->d_name) || 
-			contains(flt.elems, flt.size, ep->d_name)) {
+			contains(flt->elems, flt->count, ep->d_name)) {
 			continue;
 		}
 		size_t ep_name_len = mystrlen(ep->d_name);
@@ -205,7 +238,7 @@ void _walker(char *path, size_t path_size, ftree *ft, filter flt, int depth) { /
 				ft->dirs = realloc(ft->dirs, ft->dsize*sizeof(char *));
 				ft->dp_lens = realloc(ft->dp_lens, ft->dsize*sizeof(size_t));
 			}
-			_walker(new_path, new_path_size, ft, flt, depth-1);
+			ftree_walk(new_path, new_path_size, ft, flt, depth-1);
 			break;
 		case DT_REG:
 			ft->files[ft->cur_files_count] = new_path;
@@ -220,44 +253,6 @@ void _walker(char *path, size_t path_size, ftree *ft, filter flt, int depth) { /
 		}
 	}
 	(void) closedir(dp);
-}
-
-void walk(char *path, char* filter_str, ftree **ft_o, int depth) { // '|' is used as sep in filter_str; depth < 0 means all
-	char **filter_elems;
-	size_t filter_elems_count = split(filter_str, '|', &filter_elems);
-	filter flt = {filter_elems, filter_elems_count};
-
-	ftree *ft = calloc(1, sizeof(ftree));
-	size_t size = 32;
-	ft->files = malloc(size*sizeof(char *));
-	ft->dirs = malloc(size*sizeof(char *));
-	ft->fp_lens = malloc(size*sizeof(size_t));
-	ft->dp_lens = malloc(size*sizeof(size_t));
-	ft->fsize = size;
-	ft->cur_files_count = 0;
-	ft->dsize = size;
-	ft->cur_dirs_count = 0;
-
-	_walker(path, mystrlen(path), ft, flt, depth);
-
-	free_str_list(filter_elems, filter_elems_count);
-	*ft_o = ft;
-}
-
-void ftree_free(ftree *ft) {
-	free_str_list(ft->dirs, ft->cur_dirs_count);
-	free_str_list(ft->files, ft->cur_files_count);
-	free(ft->fp_lens); 
-	ft->fp_lens = NULL;
-	free(ft->dp_lens);
-	ft->dp_lens = NULL;
-	free(ft);
-	ft = NULL;
-}
-
-void ftree_print(ftree *ft) {
-	print_str_list(ft->dirs, ft->cur_dirs_count);
-	print_str_list(ft->files, ft->cur_files_count);
 }
 
 #endif // TOOLBOX_IMPLEMENTATION
