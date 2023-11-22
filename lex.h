@@ -44,7 +44,7 @@ lex_token **lex_tokenize(FILE *stream, size_t *token_counter);
 #include <stdlib.h>
 #include <sys/stat.h>
 
-#define LEX_SIZE 256
+#define LEX_SIZE 256*sizeof(char)
 char *LEX_FNAME = "stdin";
 
 void lex_free(lex_token **tokens, size_t n) {
@@ -79,12 +79,12 @@ char *lex_bufferize(FILE *stream, size_t *buf_counter) {
 			buf[i] = c;
 			++i;
 			if (i >= size) {
-				size *= 2;
+				size += LEX_SIZE;
 				buf = realloc(buf, size);
 			}
 		}
 		*buf_counter = i;
-		buf = realloc(buf, i);
+		buf = realloc(buf, i*sizeof(char));
 	} else {
 		fprintf(stderr, "%s:%d: [ERROR]: bufferizing failed: unsupported stream provided to tokenizer\n", __FILE__, __LINE__);
 		exit(1);
@@ -128,13 +128,13 @@ lex_token **lex_tokenize(FILE *stream, size_t *token_counter) {
 				++i;
 				++col;
 				if (j >= str_size) {
-					str_size *= 2;
+					str_size += LEX_SIZE;
 					val = realloc(val, str_size);
 				}
 				int is_slash = b_i == '\\';
 				escaped = is_slash * (is_slash ^ escaped);
 			}
-			val = realloc(val, j);
+			val = realloc(val, j*sizeof(char));
 			vlen = j;
 		} else if (b_i == '\'') { // handle char
 			new->t = LEX_CHAR;
@@ -148,13 +148,13 @@ lex_token **lex_tokenize(FILE *stream, size_t *token_counter) {
 				++i;
 				++col;
 				if (j >= str_size) {
-					str_size *= 2;
+					str_size += LEX_SIZE;
 					val = realloc(val, str_size);
 				}
 				int is_slash = b_i == '\\';
 				escaped = is_slash * (is_slash ^ escaped);
 			}
-			val = realloc(val, j);
+			val = realloc(val, j*sizeof(char));
 			vlen = j;
 		} else if (b_i >= 'A' && b_i <= 'Z' || b_i >= 'a' && b_i <= 'z') { // handle word
 			val[0] = b_i;
@@ -167,11 +167,11 @@ lex_token **lex_tokenize(FILE *stream, size_t *token_counter) {
 				++i;
 				++col;
 				if (i >= str_size) {
-					str_size *= 2;
+					str_size += LEX_SIZE;
 					val = realloc(val, str_size);
 				}
 			}
-			val = realloc(val, j);
+			val = realloc(val, j*sizeof(char));
 			vlen = j;
 			--i;
 			--col;
@@ -189,7 +189,7 @@ lex_token **lex_tokenize(FILE *stream, size_t *token_counter) {
 			}
 			--i;
 			--col;
-			val = realloc(val, j);
+			val = realloc(val, j*sizeof(char));
 			vlen = j;
 		} else { // handle symbol
 			new->t = LEX_SYMBOL;
@@ -200,7 +200,7 @@ lex_token **lex_tokenize(FILE *stream, size_t *token_counter) {
 			} else {
 				++col;
 			}
-			val = realloc(val, 1);
+			val = realloc(val, 1*sizeof(char));
 			vlen = 1;
 		}
 		new->v = val;
