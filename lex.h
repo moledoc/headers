@@ -157,6 +157,7 @@ lex_token **lex_tokenize(FILE *stream, size_t *token_counter) {
 			val = realloc(val, j*sizeof(char));
 			vlen = j;
 		} else if (b_i >= 'A' && b_i <= 'Z' || b_i >= 'a' && b_i <= 'z') { // handle word
+			new->t = LEX_WORD;
 			val[0] = b_i;
 			int j = 1;
 			++i;
