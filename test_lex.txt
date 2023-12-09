@@ -17,3 +17,4 @@ camelCase
 hypen-word
 UPPERCASE
 line with whitespace characters
+negative int: -13 -12 -2-2 -a-
