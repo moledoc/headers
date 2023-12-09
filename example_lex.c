@@ -6,7 +6,8 @@ int main(int argc, char **argv) {
 	char *fname = "test_lex.txt";
 	FILE *fptr = fopen(fname, "r");
 	LEX_FNAME=fname;
-	LEX_SKIP_WHITESPACE=0;
+	LEX_SKIP_WHITESPACE_CHAR=0;
+	LEX_SKIP_WHITESPACE_TOKEN=0;
 	lex_token **tokens = lex_tokenize(fptr, &token_counter);
 	fclose(fptr);
 	lex_print(tokens, token_counter);

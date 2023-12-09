@@ -16,3 +16,4 @@ snake_case
 camelCase
 hypen-word
 UPPERCASE
+line with whitespace characters
