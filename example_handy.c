@@ -53,4 +53,8 @@ int main(int argc, char **argv) {
 		printf("file: %s, stored length: %d, calculated length: %d, <string.h>.strlen=%d\n", ft.files[i], ft.fp_lens[i], mystrlen(ft.files[i]), strlen(ft.files[i]));
 	}
 	ftree_free(&ft);
+
+	// power
+	printf("2^10=%llu\n", power(2,10));
+	printf("3^4=%llu\n", power(3,4));
 }

@@ -38,6 +38,7 @@ void mk_ftree(ftree *ft, size_t arr_size);
 void ftree_free(ftree *ft);
 void ftree_print(ftree *ft);
 void ftree_walk(char *path, size_t path_size, ftree *ft, filter *flt, int depth); // filter: what paths are ignored; depth < 0 means all
+long long int power(long long a, int n);
 
 #endif // TOOLBOX_H_
 
@@ -254,5 +255,16 @@ void ftree_walk(char *path, size_t path_size, ftree *ft, filter *flt, int depth)
 	}
 	(void) closedir(dp);
 }
+
+long long int power(long long a, int n) {
+	long long int res = 1;
+	for (;n > 0; a*=a, n>>=1) {
+		if (n & 1) {
+			res *= a;
+		}
+	}
+	return res;
+}
+
 
 #endif // TOOLBOX_IMPLEMENTATION
