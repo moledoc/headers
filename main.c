@@ -698,6 +698,31 @@ void algo_two_sum() {
 #endif // defined(TWO_SUM)
 // }
 
+// {
+#ifdef MD5
+#include <stdlib.h>
+
+#include "md5.h"
+
+void algo_md5() {
+  unsigned char digest[16];
+  char *str[] = {"", "md5", "The quick brown fox jumps over the lazy dog"};
+
+  for (int i = 0; i < 3; ++i) {
+    md5(str[i], digest);
+    printf("mine: \n");
+    md5_print(digest);
+    printf("system: \n");
+    char cmd[128];
+    memset(cmd, '\0', sizeof(cmd));
+    snprintf(cmd, sizeof(cmd), "printf '%s' \"%s\" | md5sum", str[i]);
+    system(cmd);
+  }
+}
+
+#endif // MD5
+// }
+
 int main(int argc, char **argv) {
   char *prog_name = shift(&argc, &argv);
 
@@ -712,6 +737,10 @@ int main(int argc, char **argv) {
 #ifdef TWO_SUM
   algo_two_sum();
 #endif // TWO_SUM
+
+#ifdef MD5
+  algo_md5();
+#endif // MD5
 
   return 0;
 }

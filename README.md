@@ -23,6 +23,8 @@ The header file setup is inspired by header-only library style, but does diverge
 	- [x] shift
 - algo_misc.h
 	- [x] two sum
+- md5.h
+	- [x] md5
 
 
 ## Quick start
