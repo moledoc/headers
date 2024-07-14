@@ -33,8 +33,11 @@ The header file setup is inspired by header-only library style, but does diverge
 ## Quick start
 
 ```sh
-cc main.c -DSINGLY_LINKED_LIST && ./a.out
-cc main.c -DMAP && ./a.out
+clang main.c -DSINGLY_LINKED_LIST && ./a.out --run all
+clang main.c -DMAP && ./a.out --run all
+clang main.c -DTWO_SUM && ./a.out
+clang main.c -DMD5 && ./a.out
+clang main.c -DLOG && ./a.out
 ```
 
 ## Notes
