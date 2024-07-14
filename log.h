@@ -14,10 +14,6 @@ static const char *LOG_LEVEL_NAMES[] = {"[FATAL]: ", "[ERROR]: ", "[WARNING]: ",
 // log_level is global variable that allows changing log levels; default is INFO
 enum LOG_LEVEL log_level = INFO;
 
-// LOG_TMP_BUF_SIZE is temporary buffer's size where the message is stored
-// internally; default size if 1024
-int LOG_TMP_BUF_SIZE = 1024;
-
 // log_log logs message with level and format to stderr
 int log_log(enum LOG_LEVEL lvl, char *fmt, ...);
 
@@ -75,14 +71,8 @@ int _log_blog(char *buf, size_t bsize, enum LOG_LEVEL lvl, char *fmt,
   int n = 0;
   if (log_level >= lvl) {
     char *lvl_name = (char *)LOG_LEVEL_NAMES[lvl];
-    size_t i = 0;
-    while (*(lvl_name++) != '\0') {
-      ++i;
-    }
-    char tmp[LOG_TMP_BUF_SIZE];
-    n += snprintf(buf, bsize - i, "%s", LOG_LEVEL_NAMES[lvl]);
-    int n_tmp = vsnprintf(tmp, LOG_TMP_BUF_SIZE, fmt, args);
-    n += vsnprintf(buf + i, bsize - n_tmp, fmt, args);
+    n += sprintf(buf, "%s", lvl_name);
+    n += vsprintf(buf + n, fmt, args);
   }
   return n;
 }
