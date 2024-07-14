@@ -723,6 +723,62 @@ void algo_md5() {
 #endif // MD5
 // }
 
+// {
+#ifdef LOG
+
+#include <string.h>
+
+#include "log.h"
+
+void utils_log() {
+
+  printf("standard logging---------------\n");
+  log_level = FATAL;
+  log_fatal("%s: test test test: %d %d %d\n", __FILE__, 1, 2, 3);
+  log_level = INFO;
+  log_fatal("fatal log: should be shown\n");
+  log_info("info log: should be shown\n");
+  log_debug("debug log: shouldn't be shown\n");
+
+  printf("stream logging------------------\n");
+  log_finfo(stdout, "stream logging to stdout\n");
+  log_finfo(stderr, "stream logging to stderr\n");
+  char *filename = "example_log.out";
+  FILE *fptr = fopen(filename, "w");
+  log_level = TRACE;
+  log_ftrace(fptr, "%s:%d: trace should be shown\n", __FILE__, __LINE__);
+  log_fwarn(fptr, "warning should be shown\n");
+  fclose(fptr);
+
+  fptr = fopen(filename, "r");
+  fseek(fptr, 0, SEEK_END);
+  long read_buf_len = ftell(fptr);
+  rewind(fptr);
+  char read_buf[read_buf_len + 1];
+  memset(read_buf, '\0', sizeof(read_buf));
+  int n = fread(read_buf, sizeof(char), sizeof(read_buf), fptr);
+  fclose(fptr);
+  read_buf[n] = '\0';
+  printf("logs read from '%s' (between lines):\n\n----\n%s----\n\n", filename,
+         read_buf);
+  remove(filename);
+
+  printf("buffered logging-----------------------\n");
+  size_t bsize = 1024 * 5;
+  int len = 0;
+  char buf[bsize];
+  log_level = INFO;
+  len += log_binfo(buf + len, bsize, "should be shown\n");
+  len += log_bdebug(buf + len, bsize, "shouldn't be shown\n");
+  len += log_berr(buf + len, bsize, "should be shown\n");
+  printf("%s", buf);
+
+  return;
+}
+
+#endif // LOG
+// }
+
 int main(int argc, char **argv) {
   char *prog_name = shift(&argc, &argv);
 
@@ -741,6 +797,10 @@ int main(int argc, char **argv) {
 #ifdef MD5
   algo_md5();
 #endif // MD5
+
+#ifdef LOG
+  utils_log();
+#endif // LOG
 
   return 0;
 }

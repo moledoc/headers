@@ -25,7 +25,10 @@ The header file setup is inspired by header-only library style, but does diverge
 	- [x] two sum
 - md5.h
 	- [x] md5
-
+- log.h
+	- [x] logging to stderr
+	- [x] logging to specified FILE
+	- [x] logging to buffer
 
 ## Quick start
 
