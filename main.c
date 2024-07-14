@@ -734,20 +734,24 @@ void utils_log() {
 
   printf("standard logging---------------\n");
   log_level = FATAL;
-  log_fatal("%s: test test test: %d %d %d\n", __FILE__, 1, 2, 3);
+  log_fatal("%s: test test test: %d %c %s\n", __FILE__, 1, '2', "3");
   log_level = INFO;
   log_fatal("fatal log: should be shown\n");
   log_info("info log: should be shown\n");
   log_debug("debug log: shouldn't be shown\n");
+  log_log(INFO, "lower lvl logging func, %d %c %s\n", 1, '2', "3");
 
   printf("stream logging------------------\n");
   log_finfo(stdout, "stream logging to stdout\n");
   log_finfo(stderr, "stream logging to stderr\n");
+  log_flog(stderr, INFO, "lower lvl logging func, %d %c %s\n", 1, '2', "3");
+
   char *filename = "example_log.out";
   FILE *fptr = fopen(filename, "w");
   log_level = TRACE;
   log_ftrace(fptr, "%s:%d: trace should be shown\n", __FILE__, __LINE__);
   log_fwarn(fptr, "warning should be shown\n");
+  log_flog(fptr, INFO, "lower lvl logging func, %d %c %s\n", 1, '2', "3");
   fclose(fptr);
 
   fptr = fopen(filename, "r");
@@ -770,7 +774,9 @@ void utils_log() {
   log_level = INFO;
   len += log_binfo(buf + len, bsize, "should be shown\n");
   len += log_bdebug(buf + len, bsize, "shouldn't be shown\n");
-  len += log_berr(buf + len, bsize, "should be shown\n");
+  len += log_berr(buf + len, bsize, "should be shown: %d %c %s\n", 1, '2', "3");
+  len += log_blog(buf + len, bsize, INFO, "lower lvl logging func, %d %c %s\n",
+                  1, '2', "3");
   printf("%s", buf);
 
   return;
