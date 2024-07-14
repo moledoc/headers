@@ -9,7 +9,11 @@
 // of mod2^32
 
 #include <stddef.h>
+
+// md5 takes a message and produces md5 hash into `digest` variable
 void md5(char *message, unsigned char digest[16]);
+
+// md5_print prints the `digest`
 void md5_print(unsigned char digest[16]);
 #endif // MD5 // HEADER
 // }
