@@ -2,7 +2,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifndef UTILS
 #define UTILS
+#endif // UTILS
 #include "utils.h"
 
 // {
@@ -785,6 +787,38 @@ void utils_log() {
 #endif // LOG
 // }
 
+// {
+#ifdef UTILS
+
+long long int naive_power(long long a, int n) {
+  long long a_orig = a;
+  for (int i = 1; i < n; ++i) {
+    a *= a_orig;
+  }
+  return a;
+}
+
+void utils_power() {
+  assert(power(2, 0) == 1);
+  assert(power(2, 1) == 2);
+  assert(power(1, 0) == 1);
+  assert(power(1, 1) == 1);
+  assert(power(1, 10) == 1);
+  assert(power(4, 3) == 64);
+  assert(power(2, 10) == 1024);
+  assert(power(5, 6) == naive_power(5, 6));
+  assert(power(10, 10) == naive_power(10, 10));
+
+  // for now power doesn't support neg numbers
+  assert(power(-3, 3) == 0);
+  assert(power(3, -3) == 0);
+  assert(power(-3, -3) == 0);
+
+  printf("-- power: ok\n");
+}
+#endif // UTILS
+// }
+
 int main(int argc, char **argv) {
   char *prog_name = shift(&argc, &argv);
 
@@ -808,5 +842,8 @@ int main(int argc, char **argv) {
   utils_log();
 #endif // LOG
 
+#ifdef UTILS
+  utils_power();
+#endif // UTILS
   return 0;
 }

@@ -21,6 +21,7 @@ The header file setup is inspired by header-only library style, but does diverge
 	- [x] map
 - utils.h
 	- [x] shift
+	- [x] power
 - algo_misc.h
 	- [x] two sum
 - md5.h
