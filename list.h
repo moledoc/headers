@@ -16,43 +16,43 @@ typedef struct SLLNode {
   void *data;
 } SLLNode;
 
-// list prints the full linked list
+// sll_list prints the full linked list
 void sll_list(SLLNode *cursor);
 
-// list_len finds the linked_list length
+// sll_list_len finds the linked_list length
 size_t sll_list_len(SLLNode *cursor);
 
-// free_node frees the current node and returns the next linked list element
+// sll_free_node frees the current node and returns the next linked list element
 // frees memory
 SLLNode *sll_node_free(SLLNode *cursor);
 
-// free_nodes frees the entire linked list
+// sll_free_nodes frees the entire linked list
 // frees memory
 void sll_nodes_free(SLLNode *cursor);
 
-// create prepares a new node with all the helper functions
+// sll_create prepares a new node with all the helper functions
 // returns NULL if at least one argument is not properly provided
 // allocs memory
 SLLNode *sll_create(bool (*cmp)(void *, void *), void (*print)(SLLNode *node),
                     void (*free_data)(void *data), void *data);
 
-// append creates a new node at the end of the linked list
+// sll_append creates a new node at the end of the linked list
 // returns NULL if cursor is NULL
 // allocs memory
 SLLNode *sll_append(SLLNode *cursor, void *data);
 
-// find searches linked list for provided data and returns the first found
+// sll_find searches linked list for provided data and returns the first found
 // instance
 // returns NULL if cursor is NULL
 SLLNode *sll_find(SLLNode *cursor, void *data);
 
-// delete removes the node from the linked list
+// sll_delete removes the node from the linked list
 // linked list is kept intact
 // returns NULL if cursor is NULL
 // frees memory
 SLLNode *sll_delete(SLLNode *cursor, void *data);
 
-// update replaces old_data with new_data on the first found instance
+// sll_update replaces old_data with new_data on the first found instance
 // frees data
 // returns NULL if cursor is NULL
 SLLNode *sll_update(SLLNode *cursor, void *old_data, void *new_data);
@@ -215,14 +215,14 @@ typedef struct {
 // MAP_BUCKETS_SIZE is the buckets size for Map when creating a new map
 int MAP_BUCKETS_SIZE = 128;
 
-// hash is default hashing function
+// map_hash is default hashing function
 int map_hash(enum MapKeyType key_type, void *key, size_t cap);
 
-// free_map frees the entire map
+// map_free frees the entire map
 // frees memory
 void map_free(Map *map);
 
-// create prepares a new map with all the helper functions
+// map_create prepares a new map with all the helper functions
 // returns NULL if at least one argument is not properly provided
 // default buckets size is MAP_BUCKETS_SIZE
 // allocs memory
@@ -230,21 +230,21 @@ Map *map_create(int (*hash)(enum MapKeyType key_type, void *key, size_t cap),
                 enum MapKeyType key_type, void (*print_value)(void *value),
                 void (*free_value)(void *value));
 
-// list prints the entire map
+// map_list prints the entire map
 void map_list(Map *map);
 
-// insert adds/updates `value` to/in `map` with `key`
+// map_insert adds/updates `value` to/in `map` with `key`
 // differently:
 // if `key` doesn't exist, insert the `value`
 // if `key` exists, free the existing value and insert the `value`
 // allocs memory
 Map *map_insert(Map *map, void *key, void *value);
 
-// find retrieves value corresponding to the key
+// map_find retrieves value corresponding to the key
 // returns NULL if `key` doesn't exist in `map`
 void *map_find(Map *map, void *key);
 
-// delete removes key-value pair from `map` that has `key`
+// map_delete removes key-value pair from `map` that has `key`
 // frees memory
 Map *map_delete(Map *map, void *key);
 
@@ -536,4 +536,127 @@ Map *map_delete(Map *map, void *key) {
 }
 
 #endif // defined(MAP) // IMPLEMENTATION
+// }
+
+// {
+#if defined(STACK) || defined(QUEUE) // HEADER
+
+// print should be able to print `data`
+typedef struct SQNode {
+  struct SQNode *next;
+  void (*print)(struct SQNode *node);
+  void *data;
+} SQNode;
+
+// sq_list prints the full stack/queue
+void sq_list(SQNode *cursor);
+
+// sq_list_len finds the stack/queue length
+size_t sq_list_len(SQNode *cursor);
+
+// sq_free_node frees the current node and returns the next linked list element
+// frees memory
+// freeing of data is left for the user
+// as we want to free the node, but return the data when popping
+SQNode *sq_node_free(SQNode *cursor);
+
+// sq_free_nodes frees the entire stack/queue
+// frees memory
+void sq_nodes_free(SQNode *cursor);
+
+// sq_create creates stack/queue
+// returns NULL if at least one argument is NULL
+// allocs memory
+SQNode *sq_create(void (*print)(SQNode *node), void *data);
+
+// sq_push pushes data to
+// * top of stack
+// * end of queue
+// NULL cursor is not allowed
+// allocs memory
+SQNode *sq_push(SQNode *cursor, void *data);
+
+// sq_pop pops the
+// * top of stack
+// * head of queue
+// NULL cursor is not allowed
+// frees memory
+// returns new head, data is returned through `out`
+SQNode *sq_pop(SQNode *cursor, void **out);
+
+#endif // defined(STACK) || defined(QUEUE) // HEADER
+
+// }
+
+// {
+#ifdef STACK // IMPLEMENTATION
+
+#include <stdlib.h>
+
+void sq_list(SQNode *cursor) {
+  for (; cursor; cursor = cursor->next) {
+    printf("-> ");
+    cursor->print(cursor);
+  }
+  printf("-> %p\n", cursor);
+  return;
+}
+
+size_t sq_list_len(SQNode *cursor) {
+  size_t len = 0;
+  for (; cursor; cursor = cursor->next) {
+    ++len;
+  }
+  return len;
+}
+
+SQNode *sq_node_free(SQNode *cursor) {
+  if (!cursor) {
+    return NULL;
+  }
+  // comment in for logging: printf("freeing (%p)\n", cursor);
+  SQNode *me = cursor;
+  cursor = cursor->next;
+  free(me);
+  return cursor;
+}
+
+void sq_nodes_free(SQNode *cursor) {
+  for (; cursor != NULL;) {
+    cursor = sq_node_free(cursor);
+  }
+  return;
+}
+
+SQNode *sq_create(void (*print)(SQNode *node), void *data) {
+  if (!print || !data) {
+    return NULL;
+  }
+  SQNode *new = calloc(1, sizeof(SQNode));
+  new->print = print;
+  new->data = data;
+  return new;
+}
+
+SQNode *sq_push(SQNode *cursor, void *data) {
+  if (!cursor) {
+    return NULL;
+  }
+  SQNode *new = sq_create(cursor->print, data);
+  new->next = cursor;
+  return new;
+}
+
+SQNode *sq_pop(SQNode *cursor, void **out) {
+  if (!cursor) {
+    return NULL;
+  }
+  SQNode *new = cursor->next;
+  *out = cursor->data;
+  sq_node_free(cursor);
+  return new;
+}
+
+#endif // STACK // IMPLEMENTATION
+
 // }

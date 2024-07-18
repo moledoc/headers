@@ -17,7 +17,7 @@ The header file setup is inspired by header-only library style, but does diverge
 	- [ ] singly circular linked list
 	- [ ] doubly circular linked list
 	- [ ] queue
-	- [ ] stack
+	- [x] stack
 	- [x] map
 - utils.h
 	- [x] shift

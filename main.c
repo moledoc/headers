@@ -639,6 +639,172 @@ void ds_map(int argc, char **argv) {
 // }
 
 // {
+#ifdef STACK
+
+#include <string.h>
+
+#ifndef UTILS
+#define UTILS
+#include "utils.h"
+#undef UTILS
+#endif // UTILS
+
+#include "list.h"
+
+void sq_print_node_int(SQNode *node) {
+  printf("(%p) data:%d\n", node, *(int *)(node->data));
+  ; // force uncompressed formatting (ccls)
+}
+
+void sq_print_node_str(SQNode *node) {
+  printf("(%p) data:'%s'\n", node, (char *)(node->data));
+  ; // force uncompressed formatting (ccls)
+}
+
+void ds_stack(int argc, char **argv) {
+  char *prog_name = shift(&argc, &argv);
+
+  int a = 1;
+  int aa = a;
+  int b = 2;
+  int c = 3;
+  int d = 4;
+  int e = 5;
+  int f = 6;
+  int g = 7;
+
+  char *s1 = "test";
+  char *s1_1 = "test";
+  char *s2 = "test2";
+
+  char *run = "";
+  for (; argc > 0;) {
+    char *arg = shift(&argc, &argv);
+    if (strcmp("--run", arg) == 0 && argc > 0) {
+      run = shift(&argc, &argv);
+    }
+  }
+
+  {
+    char *cse = "sq_create";
+    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
+      printf("---- %s\n", cse);
+      SQNode *stack = NULL;
+      stack = sq_create(NULL, (void *)&a);
+      assert(!stack && "unexpected non-NULL");
+      stack = sq_create(sq_print_node_int, NULL);
+      assert(!stack && "unexpected non-NULL");
+      stack = sq_create(sq_print_node_int, (void *)&a);
+      assert(stack && "unexpected NULL");
+      sq_nodes_free(stack);
+
+      printf("-- %s: ok\n", cse);
+    }
+  }
+
+  {
+    char *cse = "sq_push";
+    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
+      printf("---- %s\n", cse);
+
+      SQNode *stack = NULL;
+      assert(!sq_push(stack, (void *)&a) && "unexpected non-NULL");
+
+      stack = sq_create(sq_print_node_int, (void *)&a);
+      sq_list(stack);
+      stack = sq_push(stack, (void *)&a);
+      stack = sq_push(stack, (void *)&aa);
+      stack = sq_push(stack, (void *)&b);
+      stack = sq_push(stack, (void *)&c);
+      stack = sq_push(stack, (void *)&d);
+      sq_list(stack);
+
+      assert(sq_list_len(stack) == 6 && "unexpected list length");
+      assert(*(int *)stack->data == d);
+      sq_nodes_free(stack);
+
+      printf("-- %s: ok\n", cse);
+    }
+  }
+
+  {
+    char *cse = "sq_pop";
+    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
+      printf("---- %s\n", cse);
+
+      SQNode *stack = NULL;
+      assert(!sq_push(stack, (void *)&a) && "unexpected non-NULL");
+
+      stack = sq_create(sq_print_node_int, (void *)&a);
+      stack = sq_push(stack, (void *)&a);
+      stack = sq_push(stack, (void *)&aa);
+      stack = sq_push(stack, (void *)&b);
+      stack = sq_push(stack, (void *)&c);
+      stack = sq_push(stack, (void *)&d);
+      sq_list(stack);
+
+      assert(sq_list_len(stack) == 6 && "unexpected list length");
+      size_t orig_len = sq_list_len(stack);
+      int exp_stack[] = (int[]){a, a, aa, b, c, d};
+      for (int i = 0; i < orig_len; ++i) {
+        void *out;
+        stack = sq_pop(stack, &out);
+        assert(sq_list_len(stack) == orig_len - i - 1 &&
+               "unexpected list length");
+        if (stack) {
+          assert(*(int *)stack->data == exp_stack[6 - i - 1 - 1]);
+        }
+        assert(*(int *)out == exp_stack[6 - i - 1] &&
+               "unexpected value in `out`");
+        printf("popped '%d'\n", *(int *)out);
+      }
+      sq_nodes_free(stack);
+
+      printf("-- %s: ok\n", cse);
+    }
+  }
+
+  {
+    char *cse = "string stack";
+    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
+      printf("---- %s\n", cse);
+
+      SQNode *stack = NULL;
+
+      stack = sq_create(sq_print_node_str, (void *)s1);
+      stack = sq_push(stack, (void *)s1_1);
+      stack = sq_push(stack, (void *)s2);
+      stack = sq_push(stack, (void *)s2);
+      sq_list(stack);
+
+      assert(sq_list_len(stack) == 4 && "unexpected list length");
+      size_t orig_len = sq_list_len(stack);
+      char *exp_stack[] = (char *[]){s1, s1_1, s2, s2};
+      for (int i = 0; i < orig_len; ++i) {
+        void *out;
+        stack = sq_pop(stack, &out);
+        assert(sq_list_len(stack) == orig_len - i - 1 &&
+               "unexpected list length");
+        if (stack) {
+          assert(strcmp((char *)stack->data, exp_stack[4 - i - 1 - 1]) == 0);
+        }
+        assert(strcmp((char *)out, exp_stack[4 - i - 1]) == 0 &&
+               "unexpected value in `out`");
+        printf("popped '%s'\n", (char *)out);
+      }
+      sq_nodes_free(stack);
+
+      printf("-- %s: ok\n", cse);
+    }
+  }
+
+  return;
+}
+
+#endif // STACK
+// }
+
+// {
 #if defined(TWO_SUM)
 
 #include "algo_misc.h"
@@ -929,6 +1095,10 @@ int main(int argc, char **argv) {
 #ifdef LEX
   utils_lex();
 #endif // LEX
+
+#ifdef STACK
+  ds_stack(argc, argv);
+#endif // STACK
 
   return 0;
 }
