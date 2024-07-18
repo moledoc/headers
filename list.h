@@ -539,52 +539,48 @@ Map *map_delete(Map *map, void *key) {
 // }
 
 // {
-#if defined(STACK) || defined(QUEUE) // HEADER
+#ifdef STACK // HEADER
+#pragma once
 
 // print should be able to print `data`
-typedef struct SQNode {
-  struct SQNode *next;
-  void (*print)(struct SQNode *node);
+typedef struct StackNode {
+  struct StackNode *next;
+  void (*print)(struct StackNode *node);
   void *data;
-} SQNode;
+} StackNode;
 
-// sq_list prints the full stack/queue
-void sq_list(SQNode *cursor);
+// stack_list prints the full stack/queue
+void stack_list(StackNode *cursor);
 
-// sq_list_len finds the stack/queue length
-size_t sq_list_len(SQNode *cursor);
+// stack_list_len finds the stack/queue length
+size_t stack_list_len(StackNode *cursor);
 
-// sq_free_node frees the current node and returns the next linked list element
+// stack_free_node frees the current node and returns the next linked list
+// element frees memory freeing of data is left for the user as we want to free
+// the node, but return the data when popping
+StackNode *stack_node_free(StackNode *cursor);
+
+// stack_free_nodes frees the entire stack/queue
 // frees memory
-// freeing of data is left for the user
-// as we want to free the node, but return the data when popping
-SQNode *sq_node_free(SQNode *cursor);
+void stack_nodes_free(StackNode *cursor);
 
-// sq_free_nodes frees the entire stack/queue
-// frees memory
-void sq_nodes_free(SQNode *cursor);
-
-// sq_create creates stack/queue
+// stack_create creates stack/queue
 // returns NULL if at least one argument is NULL
 // allocs memory
-SQNode *sq_create(void (*print)(SQNode *node), void *data);
+StackNode *stack_create(void (*print)(StackNode *node), void *data);
 
-// sq_push pushes data to
-// * top of stack
-// * end of queue
+// stack_push pushes data to top of stack
 // NULL cursor is not allowed
 // allocs memory
-SQNode *sq_push(SQNode *cursor, void *data);
+StackNode *stack_push(StackNode *cursor, void *data);
 
-// sq_pop pops the
-// * top of stack
-// * head of queue
+// stack_pop pops the top of stack
 // NULL cursor is not allowed
 // frees memory
 // returns new head, data is returned through `out`
-SQNode *sq_pop(SQNode *cursor, void **out);
+StackNode *stack_pop(StackNode *cursor, void **out);
 
-#endif // defined(STACK) || defined(QUEUE) // HEADER
+#endif // STACK // HEADER
 
 // }
 
@@ -593,7 +589,7 @@ SQNode *sq_pop(SQNode *cursor, void **out);
 
 #include <stdlib.h>
 
-void sq_list(SQNode *cursor) {
+void stack_list(StackNode *cursor) {
   for (; cursor; cursor = cursor->next) {
     printf("-> ");
     cursor->print(cursor);
@@ -602,7 +598,7 @@ void sq_list(SQNode *cursor) {
   return;
 }
 
-size_t sq_list_len(SQNode *cursor) {
+size_t stack_list_len(StackNode *cursor) {
   size_t len = 0;
   for (; cursor; cursor = cursor->next) {
     ++len;
@@ -610,53 +606,176 @@ size_t sq_list_len(SQNode *cursor) {
   return len;
 }
 
-SQNode *sq_node_free(SQNode *cursor) {
+StackNode *stack_node_free(StackNode *cursor) {
   if (!cursor) {
     return NULL;
   }
   // comment in for logging: printf("freeing (%p)\n", cursor);
-  SQNode *me = cursor;
+  StackNode *me = cursor;
   cursor = cursor->next;
   free(me);
   return cursor;
 }
 
-void sq_nodes_free(SQNode *cursor) {
+void stack_nodes_free(StackNode *cursor) {
   for (; cursor != NULL;) {
-    cursor = sq_node_free(cursor);
+    cursor = stack_node_free(cursor);
   }
   return;
 }
 
-SQNode *sq_create(void (*print)(SQNode *node), void *data) {
+StackNode *stack_create(void (*print)(StackNode *node), void *data) {
   if (!print || !data) {
     return NULL;
   }
-  SQNode *new = calloc(1, sizeof(SQNode));
+  StackNode *new = calloc(1, sizeof(StackNode));
   new->print = print;
   new->data = data;
   return new;
 }
 
-SQNode *sq_push(SQNode *cursor, void *data) {
+StackNode *stack_push(StackNode *cursor, void *data) {
   if (!cursor) {
     return NULL;
   }
-  SQNode *new = sq_create(cursor->print, data);
+  StackNode *new = stack_create(cursor->print, data);
   new->next = cursor;
   return new;
 }
 
-SQNode *sq_pop(SQNode *cursor, void **out) {
+StackNode *stack_pop(StackNode *cursor, void **out) {
   if (!cursor) {
     return NULL;
   }
-  SQNode *new = cursor->next;
+  StackNode *new = cursor->next;
   *out = cursor->data;
-  sq_node_free(cursor);
+  stack_node_free(cursor);
   return new;
 }
 
 #endif // STACK // IMPLEMENTATION
+
+// }
+
+// {
+#ifdef QUEUE // HEADER
+#pragma once
+
+// print should be able to print `data`
+typedef struct QueueNode {
+  struct QueueNode *next;
+  void (*print)(struct QueueNode *node);
+  void *data;
+} QueueNode;
+
+// queue_list prints the full stack/queue
+void queue_list(QueueNode *cursor);
+
+// queue_list_len finds the stack/queue length
+size_t queue_list_len(QueueNode *cursor);
+
+// queue_free_node frees the current node and returns the next linked list
+// element frees memory freeing of data is left for the user as we want to free
+// the node, but return the data when popping
+QueueNode *queue_node_free(QueueNode *cursor);
+
+// queue_free_nodes frees the entire stack/queue
+// frees memory
+void queue_nodes_free(QueueNode *cursor);
+
+// queue_create creates stack/queue
+// returns NULL if at least one argument is NULL
+// allocs memory
+QueueNode *queue_create(void (*print)(QueueNode *node), void *data);
+
+// queue_push pushes data to end of queue
+// NULL cursor is not allowed
+// allocs memory
+QueueNode *queue_push(QueueNode *cursor, void *data);
+
+// queue_pop pops the head of queue
+// NULL cursor is not allowed
+// frees memory
+// returns new head, data is returned through `out`
+QueueNode *queue_pop(QueueNode *cursor, void **out);
+
+#endif // QUEUE // HEADER
+
+// }
+
+// {
+#ifdef QUEUE // IMPLEMENTATION
+
+#include <stdlib.h>
+
+void queue_list(QueueNode *cursor) {
+  for (; cursor; cursor = cursor->next) {
+    printf("-> ");
+    cursor->print(cursor);
+  }
+  printf("-> %p\n", cursor);
+  return;
+}
+
+size_t queue_list_len(QueueNode *cursor) {
+  size_t len = 0;
+  for (; cursor; cursor = cursor->next) {
+    ++len;
+  }
+  return len;
+}
+
+QueueNode *queue_node_free(QueueNode *cursor) {
+  if (!cursor) {
+    return NULL;
+  }
+  // comment in for logging: printf("freeing (%p)\n", cursor);
+  QueueNode *me = cursor;
+  cursor = cursor->next;
+  free(me);
+  return cursor;
+}
+
+void queue_nodes_free(QueueNode *cursor) {
+  for (; cursor != NULL;) {
+    cursor = queue_node_free(cursor);
+  }
+  return;
+}
+
+QueueNode *queue_create(void (*print)(QueueNode *node), void *data) {
+  if (!print || !data) {
+    return NULL;
+  }
+  QueueNode *new = calloc(1, sizeof(QueueNode));
+  new->print = print;
+  new->data = data;
+  return new;
+}
+
+QueueNode *queue_push(QueueNode *cursor, void *data) {
+  if (!cursor) {
+    return NULL;
+  }
+  QueueNode *new = queue_create(cursor->print, data);
+  QueueNode *cur = cursor;
+  for (; cur->next; cur = cur->next) {
+    ;
+  }
+  cur->next = new;
+  return cursor;
+}
+
+QueueNode *queue_pop(QueueNode *cursor, void **out) {
+  if (!cursor) {
+    return NULL;
+  }
+  QueueNode *new = cursor->next;
+  *out = cursor->data;
+  queue_node_free(cursor);
+  return new;
+}
+
+#endif // QUEUE // IMPLEMENTATION
 
 // }
