@@ -48,7 +48,7 @@ clang main.c -DLEX && ./a.out
 
 * This repo is WIP, I`ll be adding things as time goes on.
 * idea: try using sym-linking headers to other projects
-* TODO: convert cool stuff from `depr` to new way
+* Main things from deprecated headers have been ported, but couple interesting ideas was left. Please this commit `4dcd5527ab18e1d06e7d04d8523c0cbe28f3951f` to see the `depr` dir as it is the last commit (currently) containing it.
 
 ## Author
 
