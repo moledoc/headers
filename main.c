@@ -2,15 +2,16 @@
 #include <stdio.h>
 #include <string.h>
 
-#ifndef UTILS
-#define UTILS
-#endif // UTILS
-#include "utils.h"
-
 // {
 #ifdef SINGLY_LINKED_LIST
 
 #include <string.h>
+
+#ifndef UTILS
+#define UTILS
+#include "utils.h"
+#undef UTILS
+#endif // UTILS
 
 #include "list.h"
 
@@ -73,6 +74,8 @@ void sll_assert_each_str(SLLNode *cursor, char **datas) {
 }
 
 void ds_singly_linked_list(int argc, char **argv) {
+  char *prog_name = shift(&argc, &argv);
+
   int a = 1;
   int b = 2;
   int c = 3;
@@ -334,6 +337,12 @@ void ds_singly_linked_list(int argc, char **argv) {
 #include <stdlib.h>
 #include <string.h>
 
+#ifndef UTILS
+#define UTILS
+#include "utils.h"
+#undef UTILS
+#endif // UTILS
+
 #include "list.h"
 
 void map_print_value_int(void *value) { printf("%d", *(int *)value); }
@@ -390,6 +399,7 @@ void map_assert_each_value_str(Map *map, MapKeyValue expected[],
 }
 
 void ds_map(int argc, char **argv) {
+  char *prog_name = shift(&argc, &argv);
 
   char *run = "";
   for (; argc > 0;) {
@@ -790,6 +800,8 @@ void utils_log() {
 // {
 #ifdef UTILS
 
+#include "utils.h"
+
 long long int naive_power(long long a, int n) {
   long long a_orig = a;
   for (int i = 1; i < n; ++i) {
@@ -819,8 +831,76 @@ void utils_power() {
 #endif // UTILS
 // }
 
+// {
+#ifdef LEX
+
+#include <string.h>
+
+#include "lex.h"
+
+void utils_lex() {
+
+  char *buf =
+      "\n\t - symbols \\ \n \t - / !@#$%^&*()[]{}_+="
+      "\n\t - words test test.test test_test TeSt TEST tEsT test123 T35t "
+      "test-test"
+      "\n\t - ints 0 1 12 -12 -0 -12 12.12 12_12 12-12"
+      "\n\t - chars a b c ab"
+      "\n\t - strings \"test\" \"test test test\" \"test-test\" \"test_test\" "
+      "'test' 't' '1' "
+      "\n";
+
+  size_t token_counter;
+  size_t buf_counter;
+  lex_token **tokens;
+  char *buffer;
+  FILE *fptr;
+
+  printf("----------- every buf token --------------\n");
+  token_counter = 0;
+  tokens = lex_tokenize_buf(buf, strlen(buf), &token_counter);
+  lex_print(tokens, token_counter);
+  lex_free(tokens, token_counter);
+
+  printf("---------- no whitespace buf tokens ---------------\n");
+  token_counter = 0;
+  LEX_SKIP_WHITESPACE_TOKEN = 1;
+  tokens = lex_tokenize_buf(buf, strlen(buf), &token_counter);
+  lex_print(tokens, token_counter);
+  lex_free(tokens, token_counter);
+
+  printf("--------- bufferize stream ----------------\n");
+  fptr = fopen("README.md", "r");
+  buf_counter = 0;
+  buffer = lex_bufferize(fptr, &buf_counter);
+  printf("buffer byte count:%d\n%s\n", buf_counter, buffer);
+  if (buffer) {
+    free(buffer);
+  }
+  fclose(fptr);
+
+  printf("--------- every stream token ----------------\n");
+  fptr = fopen("README.md", "r");
+  token_counter = 0;
+  tokens = lex_tokenize(fptr, &token_counter);
+  lex_print(tokens, token_counter);
+  lex_free(tokens, token_counter);
+  fclose(fptr);
+
+  printf("--------- no whitespace stream chars ----------------\n");
+  fptr = fopen("README.md", "r");
+  token_counter = 0;
+  LEX_SKIP_WHITESPACE_CHAR = 1;
+  tokens = lex_tokenize(fptr, &token_counter);
+  lex_print(tokens, token_counter);
+  lex_free(tokens, token_counter);
+  fclose(fptr);
+}
+
+#endif // LEX
+// }
+
 int main(int argc, char **argv) {
-  char *prog_name = shift(&argc, &argv);
 
 #ifdef SINGLY_LINKED_LIST
   ds_singly_linked_list(argc, argv);
@@ -845,5 +925,10 @@ int main(int argc, char **argv) {
 #ifdef UTILS
   utils_power();
 #endif // UTILS
+
+#ifdef LEX
+  utils_lex();
+#endif // LEX
+
   return 0;
 }

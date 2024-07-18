@@ -22,6 +22,7 @@ The header file setup is inspired by header-only library style, but does diverge
 - utils.h
 	- [x] shift
 	- [x] power
+	- [x] lexer
 - algo_misc.h
 	- [x] two sum
 - md5.h
@@ -39,11 +40,13 @@ clang main.c -DMAP && ./a.out --run all
 clang main.c -DTWO_SUM && ./a.out
 clang main.c -DMD5 && ./a.out
 clang main.c -DLOG && ./a.out
+clang main.c -DUTILS && ./a.out
+clang main.c -DLEX && ./a.out
 ```
 
 ## Notes
 
-* This repo is WIP, I'll be adding things as time goes on.
+* This repo is WIP, I`ll be adding things as time goes on.
 * idea: try using sym-linking headers to other projects
 * TODO: convert cool stuff from `depr` to new way
 
