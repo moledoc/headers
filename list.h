@@ -251,6 +251,10 @@ CDLLNode *cdll_delete(CDLLNode *cursor, void *data);
 #include <stdlib.h>
 
 void cdll_list(CDLLNode *cursor) {
+  if (!cursor) {
+    printf("-> %p\n", (void *)cursor);
+    return;
+  }
   CDLLNode *cur = cursor;
   printf("-> ");
   cur->print(cur);
