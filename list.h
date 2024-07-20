@@ -233,13 +233,13 @@ CDLLNode *cdll_find(CDLLNode *cursor, void *data);
 // frees data
 // returns NULL if cursor is NULL
 CDLLNode *cdll_update(CDLLNode *cursor, void *old_data, void *new_data);
-*/
 
 // cdll_delete removes the node from the linked list
 // linked list is kept intact
 // returns NULL if cursor is NULL
 // frees memory
 CDLLNode *cdll_delete(CDLLNode *cursor, void *data);
+*/
 
 #endif // CIRCULAR_DOUBLY_LINKED_LIST // HEADER
 // }
