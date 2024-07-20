@@ -331,6 +331,218 @@ void ds_singly_linked_list(int argc, char **argv) {
 // }
 
 // {
+#ifdef CIRCULAR_DOUBLY_LINKED_LIST
+
+#include <string.h>
+
+#ifndef UTILS
+#define UTILS
+#include "utils.h"
+#undef UTILS
+#endif // UTILS
+
+#include "list.h"
+
+void cdll_print_node_int(CDLLNode *node) {
+  printf("(%p) data:%d prev:%p next:%p\n", node, *(int *)(node->data),
+         node->prev, node->next);
+  ; // force uncompressed formatting (ccls)
+}
+
+void cdll_print_node_str(CDLLNode *node) {
+  printf("(%p) data:'%s' prev:%p next:%p\n", node, (char *)(node->data),
+         node->prev, node->next);
+  ; // force uncompressed formatting (ccls)
+}
+
+bool cdll_cmp_int(void *a, void *b) { return *(int *)a == *(int *)b; }
+
+bool cdll_cmp_str(void *a, void *b) {
+  return strcmp((char *)a, (char *)b) == 0;
+}
+
+void cdll_free_data(void *data) { ; }
+
+CDLLNode *cdll_assert_next_int(CDLLNode *cursor, int d) {
+  if (!cursor) {
+    return NULL;
+  }
+  if (*(int *)cursor->data != d) {
+    printf("[ERROR]: int data doesn't match: expected '%d', got '%d'\n", d,
+           *(int *)cursor->data);
+    assert(*(int *)cursor->data == d);
+  }
+  return cursor->next;
+}
+
+void cdll_assert_each_int(CDLLNode *cursor, int datas[]) {
+  int i = 0;
+  for (CDLLNode *cur = cursor; cur && cur != cursor;
+       cur = cdll_assert_next_int(cur, datas[i]), ++i) {
+    ;
+  }
+  return;
+}
+
+CDLLNode *cdll_assert_next_str(CDLLNode *cursor, char *d) {
+  if (!cursor) {
+    return NULL;
+  }
+  if (!cdll_cmp_str(cursor->data, d)) {
+    printf("[ERROR]: str data doesn't match: expected '%s', got '%s'\n", d,
+           (char *)cursor->data);
+    assert(cdll_cmp_str(cursor->data, d));
+  }
+  return cursor->next;
+}
+
+void cdll_assert_each_str(CDLLNode *cursor, char **datas) {
+  int i = 0;
+  for (CDLLNode *cur = cursor; cur && cur != cursor;
+       cur = cdll_assert_next_str(cur, datas[i]), ++i) {
+    ;
+  }
+  return;
+}
+
+void ds_circular_doubly_linked_list(int argc, char **argv) {
+  char *prog_name = shift(&argc, &argv);
+
+  int a = 1;
+  int b = 2;
+  int c = 3;
+  int d = 4;
+  int e = 5;
+  int f = 6;
+  int g = 7;
+
+  char *s1 = "test";
+  char *s1_1 = "test";
+  char *s2 = "test2";
+
+  char *run = "";
+  for (; argc > 0;) {
+    char *arg = shift(&argc, &argv);
+    if (strcmp("--run", arg) == 0 && argc > 0) {
+      run = shift(&argc, &argv);
+    }
+  }
+
+  {
+    char *cse = "cdll_create_validation";
+    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
+      printf("---- %s\n", cse);
+      CDLLNode *cdll = NULL;
+      cdll = cdll_create(NULL, cdll_print_node_int, cdll_free_data, NULL, NULL,
+                         (void *)&a);
+      assert(!cdll);
+      cdll = cdll_create(cdll_cmp_int, NULL, cdll_free_data, NULL, NULL,
+                         (void *)&a);
+      assert(!cdll);
+      cdll = cdll_create(cdll_cmp_int, cdll_print_node_int, NULL, NULL, NULL,
+                         (void *)&a);
+      assert(!cdll);
+      cdll = cdll_create(cdll_cmp_int, cdll_print_node_int, cdll_free_data,
+                         NULL, NULL, NULL);
+      assert(!cdll);
+      cdll_nodes_free(cdll);
+
+      printf("-- %s: ok\n", cse);
+    }
+  }
+
+  {
+    char *cse = "cdll_create";
+    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
+      printf("---- %s\n", cse);
+      CDLLNode *cdll = cdll_create(cdll_cmp_int, cdll_print_node_int,
+                                   cdll_free_data, NULL, NULL, (void *)&a);
+      cdll_list(cdll);
+      cdll_assert_next_int(cdll, a);
+      cdll_nodes_free(cdll);
+
+      printf("-- %s: ok\n", cse);
+    }
+  }
+
+  {
+    char *cse = "cdll_append_validate";
+    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
+      printf("---- %s\n", cse);
+
+      CDLLNode *cdll = NULL;
+      cdll = cdll_append(NULL, (void *)&a);
+      assert(!cdll && "should be NULL");
+      cdll_nodes_free(cdll);
+
+      printf("-- %s: ok\n", cse);
+    }
+  }
+
+  {
+    char *cse = "cdll_append";
+    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
+      printf("---- %s\n", cse);
+
+      CDLLNode *cdll = NULL;
+
+      cdll = cdll_create(cdll_cmp_int, cdll_print_node_int, cdll_free_data,
+                         NULL, NULL, (void *)&a);
+      printf("head: %p\n", cdll);
+      cdll_print_node_int(cdll);
+      cdll_list(cdll);
+      printf("-----\n");
+      cdll = cdll_append(cdll, (void *)(&b));
+      cdll_list(cdll);
+      printf("-----\n");
+      cdll = cdll_append(cdll, (void *)(&c));
+      cdll = cdll_append(cdll, (void *)(&d));
+      cdll = cdll_append(cdll, (void *)(&e));
+      cdll_list(cdll);
+
+      assert(cdll_list_len(cdll) == 5 && "unexpected list length");
+      cdll_assert_each_int(cdll, (int[]){a, b, c, d, e});
+      cdll_nodes_free(cdll);
+
+      printf("-- %s: ok\n", cse);
+    }
+  }
+
+  {
+    char *cse = "cdll_string_data";
+    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
+      printf("---- %s\n", cse);
+
+      CDLLNode *cdll = cdll_create(cdll_cmp_str, cdll_print_node_str,
+                                   cdll_free_data, NULL, NULL, (void *)s1);
+      printf("head: %p\n", cdll);
+      cdll_print_node_str(cdll);
+
+      cdll = cdll_append(cdll, (void *)s1_1);
+      cdll = cdll_append(cdll, (void *)s2);
+      cdll_list(cdll);
+
+      assert(cdll_list_len(cdll) == 3 && "list length unexpected");
+      cdll_assert_each_str(cdll, (char *[]){s1, s1_1, s2});
+
+      cdll_nodes_free(cdll);
+
+      printf("-- %s: ok\n", cse);
+    }
+  }
+
+  // TODO: implement
+  // * find
+  // * update
+  // * delete
+
+  return;
+}
+
+#endif // CIRCULAR_DOUBLY_LINKED_LIST
+// }
+
+// {
 #ifdef MAP
 
 #include <stdio.h>
@@ -1236,6 +1448,10 @@ int main(int argc, char **argv) {
 #ifdef SINGLY_LINKED_LIST
   ds_singly_linked_list(argc, argv);
 #endif // SINGLY_LINKED_LIST
+
+#ifdef CIRCULAR_DOUBLY_LINKED_LIST
+  ds_circular_doubly_linked_list(argc, argv);
+#endif // CIRCULAR_DOUBLY_LINKED_LIST
 
 #ifdef MAP
   ds_map(argc, argv);

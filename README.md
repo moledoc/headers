@@ -16,6 +16,7 @@ The header file setup is inspired by header-only library style, but does diverge
 	- [ ] doubly linked list
 	- [ ] singly circular linked list
 	- [ ] doubly circular linked list
+		- WIP
 	- [x] queue
 	- [x] stack
 	- [x] map
@@ -36,6 +37,7 @@ The header file setup is inspired by header-only library style, but does diverge
 
 ```sh
 clang main.c -DSINGLY_LINKED_LIST && ./a.out --run all
+clang main.c -DCIRCULAR_DOUBLY_LINKED_LIST && ./a.out --run all
 clang main.c -DMAP && ./a.out --run all
 clang main.c -DTWO_SUM && ./a.out
 clang main.c -DMD5 && ./a.out
