@@ -379,6 +379,10 @@ void cdll_assert_each_int(CDLLNode *cursor, int datas[]) {
   int i = 0;
   for (CDLLNode *cur = cursor; cur && cur != cursor;
        cur = cdll_assert_next_int(cur, datas[i]), ++i) {
+    assert(cursor->prev && cursor->prev->next == cursor &&
+           "prev->next != current");
+    assert(cursor->next && cursor->next->prev == cursor &&
+           "next->prev != current");
     ;
   }
   return;
@@ -400,6 +404,10 @@ void cdll_assert_each_str(CDLLNode *cursor, char **datas) {
   int i = 0;
   for (CDLLNode *cur = cursor; cur && cur != cursor;
        cur = cdll_assert_next_str(cur, datas[i]), ++i) {
+    assert(cursor->prev && cursor->prev->next == cursor &&
+           "prev->next != current");
+    assert(cursor->next && cursor->next->prev == cursor &&
+           "next->prev != current");
     ;
   }
   return;
