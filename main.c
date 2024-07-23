@@ -409,6 +409,7 @@ void ds_circular_doubly_linked_list(int argc, char **argv) {
   char *prog_name = shift(&argc, &argv);
 
   int a = 1;
+  int aa = a;
   int b = 2;
   int c = 3;
   int d = 4;
@@ -526,6 +527,104 @@ void ds_circular_doubly_linked_list(int argc, char **argv) {
       cdll_assert_each_str(cdll, (char *[]){s1, s1_1, s2});
 
       cdll_nodes_free(cdll);
+
+      printf("-- %s: ok\n", cse);
+    }
+  }
+
+  {
+    char *cse = "cdll_find_validate";
+    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
+      printf("---- %s\n", cse);
+
+      CDLLNode *cdll = NULL;
+      cdll = cdll_find(NULL, (void *)&a);
+      assert(!cdll && "should be NULL");
+      cdll_nodes_free(cdll);
+
+      printf("-- %s: ok\n", cse);
+    }
+  }
+
+  {
+    char *cse = "cdll_find";
+    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
+      printf("---- %s\n", cse);
+
+      // single elem list find
+      {
+        CDLLNode *cdll = cdll_create(cdll_cmp_int, cdll_print_node_int,
+                                     cdll_free_data, NULL, NULL, (void *)&a);
+        CDLLNode *fnd = cdll_find(cdll, (void *)&a);
+        assert(fnd && "unexpected NULL");
+        assert(*(int *)fnd->data == a && "data mismatch");
+        printf("single iters %d\n", iters);
+
+        fnd = cdll_find(cdll, (void *)&aa);
+        assert(fnd && "unexpected NULL");
+        assert(*(int *)fnd->data == a &&
+               "data mismatch"); // NOTE: cmp with `a`, because aa == a;
+        printf("single iters %d\n", iters);
+
+        cdll_nodes_free(cdll);
+      }
+
+      // two elem list find
+      {
+        int datas[2] = {a, b};
+        CDLLNode *cdll = cdll_create(cdll_cmp_int, cdll_print_node_int,
+                                     cdll_free_data, NULL, NULL, (void *)&a);
+        CDLLNode *fnd = NULL;
+        for (int i = 1; i < 2; ++i) {
+          cdll = cdll_append(cdll, (void *)(&datas[i]));
+        }
+
+        for (int i = 0; i < sizeof(datas) / sizeof(*datas); ++i) {
+          fnd = cdll_find(cdll, (void *)&datas[i]);
+          assert(fnd && "unexpected NULL");
+          cdll_assert_next_int(fnd, datas[i]);
+          printf("two -- iters %d\n", iters);
+        }
+        cdll_nodes_free(cdll);
+      }
+
+      // three elem list find
+      {
+        int datas[3] = {a, b, c};
+        CDLLNode *cdll = cdll_create(cdll_cmp_int, cdll_print_node_int,
+                                     cdll_free_data, NULL, NULL, (void *)&a);
+        CDLLNode *fnd = NULL;
+        for (int i = 1; i < sizeof(datas) / sizeof(*datas); ++i) {
+          cdll = cdll_append(cdll, (void *)(&datas[i]));
+        }
+
+        for (int i = 0; i < sizeof(datas) / sizeof(*datas); ++i) {
+          fnd = cdll_find(cdll, (void *)&datas[i]);
+          assert(fnd && "unexpected NULL");
+          cdll_assert_next_int(fnd, datas[i]);
+          printf("three -- iters %d\n", iters);
+        }
+        cdll_nodes_free(cdll);
+      }
+
+      // more elem list find
+      {
+        int datas[7] = {a, b, c, d, e, f, g};
+        CDLLNode *cdll = cdll_create(cdll_cmp_int, cdll_print_node_int,
+                                     cdll_free_data, NULL, NULL, (void *)&a);
+        CDLLNode *fnd = NULL;
+        for (int i = 1; i < sizeof(datas) / sizeof(*datas); ++i) {
+          cdll = cdll_append(cdll, (void *)(&datas[i]));
+        }
+
+        for (int i = 0; i < sizeof(datas) / sizeof(*datas); ++i) {
+          fnd = cdll_find(cdll, (void *)&datas[i]);
+          assert(fnd && "unexpected NULL");
+          cdll_assert_next_int(fnd, datas[i]);
+          printf("more -- iters %d\n", iters);
+        }
+        cdll_nodes_free(cdll);
+      }
 
       printf("-- %s: ok\n", cse);
     }

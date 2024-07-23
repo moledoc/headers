@@ -38,6 +38,7 @@ SLLNode *sll_create(bool (*cmp)(void *, void *), void (*print)(SLLNode *node),
 
 // sll_append creates a new node at the end of the linked list
 // returns NULL if cursor is NULL
+// allows duplicates
 // allocs memory
 SLLNode *sll_append(SLLNode *cursor, void *data);
 
@@ -220,10 +221,10 @@ CDLLNode *cdll_create(bool (*cmp)(void *, void *),
 
 // cdll_append creates a new node at the end of the linked list
 // returns NULL if cursor is NULL
+// allows duplicates
 // allocs memory
 CDLLNode *cdll_append(CDLLNode *cursor, void *data);
 
-/*
 // cdll_find searches linked list for provided data and returns the first found
 // instance
 // returns NULL if cursor is NULL
@@ -239,7 +240,6 @@ CDLLNode *cdll_update(CDLLNode *cursor, void *old_data, void *new_data);
 // returns NULL if cursor is NULL
 // frees memory
 CDLLNode *cdll_delete(CDLLNode *cursor, void *data);
-*/
 
 #endif // CIRCULAR_DOUBLY_LINKED_LIST // HEADER
 // }
@@ -344,10 +344,45 @@ CDLLNode *cdll_append(CDLLNode *cursor, void *data) {
   return cursor;
 }
 
-// TODO: implement
-// * find
-// * update
-// * delete
+int iters;
+
+// cdll_find searches linked list for provided data and returns the first found
+// instance
+// returns NULL if cursor is NULL
+CDLLNode *cdll_find(CDLLNode *cursor, void *data) {
+  if (!cursor) {
+    return NULL;
+  }
+  iters = 1;
+  if (cursor->cmp(cursor->data, data)) {
+    return cursor;
+  }
+  CDLLNode *prev = cursor->prev;
+  CDLLNode *next = cursor->next;
+  for (; next != cursor && prev != cursor;) {
+    iters++;
+    if (next->cmp(next->data, data)) {
+      return next;
+    }
+    if (prev->cmp(prev->data, data)) {
+      return prev;
+    }
+    prev = prev->prev;
+    next = next->next;
+  }
+  return NULL;
+}
+
+// cdll_update replaces old_data with new_data on the first found instance
+// frees data
+// returns NULL if cursor is NULL
+CDLLNode *cdll_update(CDLLNode *cursor, void *old_data, void *new_data);
+
+// cdll_delete removes the node from the linked list
+// linked list is kept intact
+// returns NULL if cursor is NULL
+// frees memory
+CDLLNode *cdll_delete(CDLLNode *cursor, void *data);
 
 #endif // CIRCULAR_DOUBLY_LINKED_LIST // IMPLEMENTATION
 // }
