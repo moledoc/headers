@@ -372,6 +372,9 @@ CDLLNode *cdll_find(CDLLNode *cursor, void *data) {
     if (prev->cmp(prev->data, data)) {
       return prev;
     }
+    if (prev == next || prev->prev == next || next->next == prev) {
+      break;
+    }
     prev = prev->prev;
     next = next->next;
   }

@@ -655,6 +655,25 @@ void ds_circular_doubly_linked_list(int argc, char **argv) {
         cdll_nodes_free(cdll);
       }
 
+      // not found
+      {
+        int datas[7] = {a, b, c, d, e, f, g};
+        CDLLNode *cdll = cdll_create(cdll_cmp_int, cdll_print_node_int,
+                                     cdll_free_data, NULL, NULL, (void *)&a);
+        CDLLNode *fnd = NULL;
+        for (int i = 1; i < sizeof(datas) / sizeof(*datas); ++i) {
+          cdll = cdll_append(cdll, (void *)(&datas[i]));
+        }
+
+        int not_found = 10000;
+        fnd = cdll_find(cdll, (void *)&not_found);
+        assert(!fnd && "unexpected non-NULL");
+#ifdef CDLL_TESTS
+        printf("not found -- iters %d\n", iters);
+#endif // CDLL_TESTS
+        cdll_nodes_free(cdll);
+      }
+
       printf("-- %s: ok\n", cse);
     }
   }
