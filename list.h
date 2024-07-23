@@ -343,7 +343,9 @@ CDLLNode *cdll_append(CDLLNode *cursor, void *data) {
   return cursor;
 }
 
+#ifdef CDLL_TESTS
 int iters = 0;
+#endif // CDLL_TESTS
 
 // cdll_find searches linked list for provided data and returns the first found
 // instance
@@ -352,14 +354,18 @@ CDLLNode *cdll_find(CDLLNode *cursor, void *data) {
   if (!cursor) {
     return NULL;
   }
-  iters = 1;
+#ifdef CDLL_TESTS
+  iters = 0;
+#endif // CDLL_TESTS
   if (cursor->cmp(cursor->data, data)) {
     return cursor;
   }
   CDLLNode *prev = cursor->prev;
   CDLLNode *next = cursor->next;
   for (; next != cursor && prev != cursor;) {
-    iters++;
+#ifdef CDLL_TESTS
+    ++iters;
+#endif // CDLL_TESTS
     if (next->cmp(next->data, data)) {
       return next;
     }

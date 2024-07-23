@@ -341,6 +341,7 @@ void ds_singly_linked_list(int argc, char **argv) {
 #undef UTILS
 #endif // UTILS
 
+#define CDLL_TESTS
 #include "list.h"
 
 void cdll_print_node_int(CDLLNode *node) {
@@ -576,13 +577,17 @@ void ds_circular_doubly_linked_list(int argc, char **argv) {
         CDLLNode *fnd = cdll_find(cdll, (void *)&a);
         assert(fnd && "unexpected NULL");
         assert(*(int *)fnd->data == a && "data mismatch");
+#ifdef CDLL_TESTS
         printf("single iters %d\n", iters);
+#endif // CDLL_TESTS
 
         fnd = cdll_find(cdll, (void *)&aa);
         assert(fnd && "unexpected NULL");
         assert(*(int *)fnd->data == a &&
                "data mismatch"); // NOTE: cmp with `a`, because aa == a;
+#ifdef CDLL_TESTS
         printf("single iters %d\n", iters);
+#endif // CDLL_TESTS
 
         cdll_nodes_free(cdll);
       }
@@ -593,7 +598,7 @@ void ds_circular_doubly_linked_list(int argc, char **argv) {
         CDLLNode *cdll = cdll_create(cdll_cmp_int, cdll_print_node_int,
                                      cdll_free_data, NULL, NULL, (void *)&a);
         CDLLNode *fnd = NULL;
-        for (int i = 1; i < 2; ++i) {
+        for (int i = 1; i < sizeof(datas) / sizeof(*datas); ++i) {
           cdll = cdll_append(cdll, (void *)(&datas[i]));
         }
 
@@ -601,7 +606,9 @@ void ds_circular_doubly_linked_list(int argc, char **argv) {
           fnd = cdll_find(cdll, (void *)&datas[i]);
           assert(fnd && "unexpected NULL");
           cdll_assert_next_int(fnd, datas[i]);
+#ifdef CDLL_TESTS
           printf("two -- iters %d\n", iters);
+#endif // CDLL_TESTS
         }
         cdll_nodes_free(cdll);
       }
@@ -620,7 +627,9 @@ void ds_circular_doubly_linked_list(int argc, char **argv) {
           fnd = cdll_find(cdll, (void *)&datas[i]);
           assert(fnd && "unexpected NULL");
           cdll_assert_next_int(fnd, datas[i]);
+#ifdef CDLL_TESTS
           printf("three -- iters %d\n", iters);
+#endif // CDLL_TESTS
         }
         cdll_nodes_free(cdll);
       }
@@ -639,7 +648,9 @@ void ds_circular_doubly_linked_list(int argc, char **argv) {
           fnd = cdll_find(cdll, (void *)&datas[i]);
           assert(fnd && "unexpected NULL");
           cdll_assert_next_int(fnd, datas[i]);
+#ifdef CDLL_TESTS
           printf("more -- iters %d\n", iters);
+#endif // CDLL_TESTS
         }
         cdll_nodes_free(cdll);
       }
@@ -649,12 +660,13 @@ void ds_circular_doubly_linked_list(int argc, char **argv) {
   }
 
   // TODO: implement
-  // * find
   // * update
   // * delete
 
   return;
 }
+
+#undef CDLL_TESTS
 
 #endif // CIRCULAR_DOUBLY_LINKED_LIST
 // }
