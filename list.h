@@ -329,7 +329,7 @@ CDLLNode *cdll_create(bool (*cmp)(void *, void *),
 }
 
 CDLLNode *cdll_append(CDLLNode *cursor, void *data) {
-  if (!cursor && !cursor->prev) {
+  if (!cursor || !cursor->prev) {
     return NULL;
   }
 
