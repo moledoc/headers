@@ -329,22 +329,21 @@ CDLLNode *cdll_create(bool (*cmp)(void *, void *),
 }
 
 CDLLNode *cdll_append(CDLLNode *cursor, void *data) {
-  if (!cursor) {
+  if (!cursor && !cursor->prev) {
     return NULL;
   }
 
-  CDLLNode *cur = cursor;
-  for (; cur->next != cursor; cur = cur->next) {
-    ;
-  }
   CDLLNode *new = cdll_create(cursor->cmp, cursor->print, cursor->free_data,
-                              cur, cur->next, data);
-  cur->next = new;
+                              cursor->prev, cursor, data);
+  if (cursor->next == cursor) { // NOTE: if is 1 elem list
+    cursor->next = new;
+  }
+  cursor->prev->next = new;
   cursor->prev = new;
   return cursor;
 }
 
-int iters;
+int iters = 0;
 
 // cdll_find searches linked list for provided data and returns the first found
 // instance

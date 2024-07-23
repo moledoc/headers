@@ -503,6 +503,16 @@ void ds_circular_doubly_linked_list(int argc, char **argv) {
 
       assert(cdll_list_len(cdll) == 5 && "unexpected list length");
       cdll_assert_each_int(cdll, (int[]){a, b, c, d, e});
+
+      printf("-----\n");
+      cdll = cdll_append(cdll, (void *)(&c));
+      cdll = cdll_append(cdll, (void *)(&d));
+      cdll = cdll_append(cdll, (void *)(&e));
+      cdll_list(cdll);
+
+      assert(cdll_list_len(cdll) == 8 && "unexpected list length");
+      cdll_assert_each_int(cdll, (int[]){a, b, c, d, e, c, d, e});
+
       cdll_nodes_free(cdll);
 
       printf("-- %s: ok\n", cse);
