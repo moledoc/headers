@@ -453,8 +453,20 @@ typedef struct {
   size_t cap;
 } Map;
 
-// MAP_BUCKETS_SIZE is the buckets size for Map when creating a new map
-int MAP_BUCKETS_SIZE = 128;
+enum {
+  MAP_BUCKETS_SIZE =
+      521, // MAP_BUCKETS_SIZE is the buckets size for Map when
+           // creating a new map.
+           // Guarantee of no common factor for array size, hash
+           // multiplier likely data values;
+           // ref: The Practice of Programming, B. Kernighan, R. Pike, p 57
+
+  HASH_MULTIPLIER =
+      31, // HASH_MULTIPLIER is multiplier used when calculating
+          // hash for string map key.
+          // Empirically shown to be good;
+          // ref: The Practice of Programming, B. Kernighan, R. Pike, p 56
+};
 
 // map_hash is default hashing function
 int map_hash(enum MapKeyType key_type, void *key, size_t cap);
@@ -507,10 +519,11 @@ int map_hash(enum MapKeyType key_type, void *key, size_t cap) {
   }
   case MapKeyStr: {
     char *kkey = (char *)key;
-    size_t key_len = strlen(kkey);
+    size_t key_len = 0;
+
     int h = 0;
-    for (size_t i = 0; i < key_len; ++i) {
-      h += *(kkey + i);
+    for (unsigned char *p = (unsigned char *)kkey; *p != '\0'; ++p, ++key_len) {
+      h += HASH_MULTIPLIER * h + *p;
     }
     if (cap == 0) {
       cap = key_len;
