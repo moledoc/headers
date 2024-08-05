@@ -501,6 +501,9 @@ void *map_find(Map *map, void *key);
 // frees memory
 Map *map_delete(Map *map, void *key);
 
+// map_apply executes func fn to each list elements with given argument
+void map_apply(Map *map, void (*fn)(MapKeyValue *, void *), void *arg);
+
 // TODO: reorg - handle up- and down-sizing
 
 #endif // defined(MAP) // HEADER
@@ -787,6 +790,16 @@ Map *map_delete(Map *map, void *key) {
   }
 
   return map;
+}
+
+// map_apply executes func fn to each list elements with given argument
+void map_apply(Map *map, void (*fn)(MapKeyValue *, void *), void *arg) {
+  for (int i = 0; i < map->cap; ++i) {
+    if (map->kvs[i] == NULL) {
+      continue;
+    }
+    (*fn)(map->kvs[i], arg);
+  }
 }
 
 #endif // defined(MAP) // IMPLEMENTATION

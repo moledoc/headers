@@ -846,6 +846,19 @@ void map_assert_each_value_str(Map *map, MapKeyValue expected[],
   return;
 }
 
+void map_apply_print_node_int(MapKeyValue *kv, void *fmt) {
+  printf(fmt, kv);
+  return;
+}
+
+void map_apply_inc_int(MapKeyValue *kv, void *d) {
+  if (kv == NULL) {
+    return;
+  }
+  *(int *)kv->value += *(int *)d;
+  return;
+}
+
 void ds_map(int argc, char **argv) {
   char *prog_name = shift(&argc, &argv);
 
@@ -1072,6 +1085,68 @@ void ds_map(int argc, char **argv) {
         assert(map->len == kvs_len && map->len == map_count_kvs(map) &&
                "unexpected element count");
         map_assert_each_value_str(map, kvs, kvs_len);
+      }
+
+      map_free(map);
+
+      printf("-- %s: ok\n", cse);
+    }
+  }
+
+  {
+    char *cse = "map_apply";
+    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
+      printf("---- %s\n", cse);
+
+      Map *map =
+          map_create(map_hash, MapKeyInt, map_print_value_int, map_free_data);
+      assert(map && "unexpected NULL");
+
+      int a = 1;
+      int b = 2;
+      int c = 3;
+      int d = 4;
+      int e = 5;
+
+      int a_cpy = a;
+      int b_cpy = b;
+      int c_cpy = c;
+      int d_cpy = d;
+      int e_cpy = e;
+
+      MapKeyValue kvs[] = (MapKeyValue[]){
+          (MapKeyValue){.key = (void *)&a, .value = (void *)&a_cpy},
+          (MapKeyValue){.key = (void *)&b, .value = (void *)&b_cpy},
+          (MapKeyValue){.key = (void *)&c, .value = (void *)&c_cpy},
+          (MapKeyValue){.key = (void *)&d, .value = (void *)&d_cpy},
+          (MapKeyValue){.key = (void *)&e, .value = (void *)&e_cpy},
+      };
+
+      int kvs_len = sizeof(kvs) / sizeof(MapKeyValue);
+
+      for (int i = 0; i < kvs_len; ++i) {
+        map = map_insert(map, kvs[i].key, kvs[i].value);
+        assert(map && "unexpected NULL");
+
+        printf("idx for '%d:%d': %d\n", *(int *)kvs[i].key,
+               *(int *)kvs[i].value,
+               map_hash(MapKeyStr, (char *)kvs[i].key, map->cap));
+      }
+
+      int inc_coef = 5;
+      map_apply(map, map_apply_print_node_int,
+                (void *)"apply -- map kv ptr '%p'\n");
+      map_apply(map, map_apply_inc_int, (void *)&inc_coef);
+
+      int exp_keys[] = (int[]){a, b, c, d, e};
+      int exp_values[] = (int[]){a + inc_coef, b + inc_coef, c + inc_coef,
+                                 d + inc_coef, e + inc_coef};
+      for (int i = 0; i < sizeof(exp_keys) / sizeof(exp_keys[0]); ++i) {
+        void *tmp = map_find(map, (void *)&exp_keys[i]);
+        assert(tmp && "unexpected NULL");
+        int fnd = *(int *)tmp;
+
+        assert(exp_values[i] == fnd && "value mismatch");
       }
 
       map_free(map);
