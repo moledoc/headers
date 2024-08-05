@@ -73,6 +73,19 @@ void sll_assert_each_str(SLLNode *cursor, char **datas) {
   return;
 }
 
+void sll_apply_print_node_int(SLLNode *cursor, void *fmt) {
+  printf(fmt, cursor);
+  return;
+}
+
+void sll_apply_inc_int(SLLNode *cursor, void *d) {
+  if (!cursor) {
+    return;
+  }
+  *(int *)cursor->data += *(int *)d;
+  return;
+}
+
 void ds_singly_linked_list(int argc, char **argv) {
   char *prog_name = shift(&argc, &argv);
 
@@ -358,6 +371,39 @@ void ds_singly_linked_list(int argc, char **argv) {
       printf("found node: ");
       sll_print_node_int(n);
       sll_assert_next_int(n, a);
+
+      sll_nodes_free(ll);
+
+      printf("-- %s: ok\n", cse);
+    }
+  }
+
+  {
+    char *cse = "sll_apply";
+    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
+      printf("---- %s\n", cse);
+
+      int a_cpy = a;
+      int b_cpy = b;
+      int c_cpy = c;
+      int d_cpy = d;
+      int e_cpy = e;
+
+      SLLNode *ll = sll_create(sll_cmp_int, sll_print_node_int, sll_free_data,
+                               (void *)&a_cpy);
+
+      ll = sll_add(ll, (void *)(&b_cpy));
+      ll = sll_add(ll, (void *)(&c_cpy));
+      ll = sll_add(ll, (void *)(&d_cpy));
+      ll = sll_add(ll, (void *)(&e_cpy));
+
+      int inc_coef = 5;
+      sll_apply(ll, sll_apply_print_node_int, "apply -- node ptr '%p'\n");
+      sll_apply(ll, sll_apply_inc_int, (void *)&inc_coef);
+
+      assert(sll_list_len(ll) == 5 && "list length unexpected");
+      sll_assert_each_int(ll, (int[]){e + inc_coef, d + inc_coef, c + inc_coef,
+                                      b + inc_coef, a + inc_coef});
 
       sll_nodes_free(ll);
 

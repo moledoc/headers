@@ -30,6 +30,9 @@ SLLNode *sll_node_free(SLLNode *cursor);
 // frees memory
 void sll_nodes_free(SLLNode *cursor);
 
+// sll_apply executes func fn to each list elements with given argument
+void sll_apply(SLLNode *cursor, void (*fn)(SLLNode *, void *), void *arg);
+
 // sll_create prepares a new node with all the helper functions
 // returns NULL if at least one argument is not properly provided
 // allocs memory
@@ -106,6 +109,12 @@ void sll_nodes_free(SLLNode *cursor) {
     cursor = sll_node_free(cursor);
   }
   return;
+}
+
+void sll_apply(SLLNode *cursor, void (*fn)(SLLNode *, void *), void *arg) {
+  for (; cursor != NULL; cursor = cursor->next) {
+    (*fn)(cursor, arg);
+  }
 }
 
 SLLNode *sll_create(bool (*cmp)(void *, void *), void (*print)(SLLNode *node),
