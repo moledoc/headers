@@ -171,6 +171,47 @@ void ds_singly_linked_list(int argc, char **argv) {
   }
 
   {
+    char *cse = "sll_add_validate";
+    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
+      printf("---- %s\n", cse);
+
+      SLLNode *ll = NULL;
+      ll = sll_add(NULL, (void *)&a);
+      assert(!ll && "should be NULL");
+      sll_nodes_free(ll);
+
+      printf("-- %s: ok\n", cse);
+    }
+  }
+
+  {
+    char *cse = "sll_add";
+    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
+      printf("---- %s\n", cse);
+
+      SLLNode *ll = NULL;
+
+      ll = sll_create(sll_cmp_int, sll_print_node_int, sll_free_data,
+                      (void *)&a);
+      printf("head: %p\n", ll);
+      sll_print_node_int(ll);
+      sll_list(ll);
+      ll = sll_add(ll, (void *)(&b));
+      sll_list(ll);
+      ll = sll_add(ll, (void *)(&c));
+      ll = sll_add(ll, (void *)(&d));
+      ll = sll_add(ll, (void *)(&e));
+      sll_list(ll);
+
+      assert(sll_list_len(ll) == 5 && "unexpected list length");
+      sll_assert_each_int(ll, (int[]){e, d, c, b, a});
+      sll_nodes_free(ll);
+
+      printf("-- %s: ok\n", cse);
+    }
+  }
+
+  {
     char *cse = "sll_find_validate";
     if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
       printf("---- %s\n", cse);
@@ -188,9 +229,9 @@ void ds_singly_linked_list(int argc, char **argv) {
       printf("---- %s\n", cse);
       SLLNode *ll = sll_create(sll_cmp_int, sll_print_node_int, sll_free_data,
                                (void *)&a);
-      ll = sll_append(ll, (void *)(&b));
-      ll = sll_append(ll, (void *)(&c));
-      ll = sll_append(ll, (void *)(&d));
+      ll = sll_add(ll, (void *)(&b));
+      ll = sll_add(ll, (void *)(&c));
+      ll = sll_add(ll, (void *)(&d));
       SLLNode *n = sll_find(ll, (void *)(&c));
       printf("found node: ");
       sll_print_node_int(n);
@@ -218,21 +259,21 @@ void ds_singly_linked_list(int argc, char **argv) {
       printf("---- %s\n", cse);
       SLLNode *ll = sll_create(sll_cmp_int, sll_print_node_int, sll_free_data,
                                (void *)&a);
-      ll = sll_append(ll, (void *)(&a));
-      ll = sll_append(ll, (void *)(&b));
-      ll = sll_append(ll, (void *)(&c));
+      ll = sll_add(ll, (void *)(&a));
+      ll = sll_add(ll, (void *)(&b));
+      ll = sll_add(ll, (void *)(&c));
 
       printf("deleting %d\n", b);
       ll = sll_delete(ll, (void *)(&b));
       sll_list(ll);
       assert(sll_list_len(ll) == 3 && "list length unexpected");
-      sll_assert_each_int(ll, (int[]){a, a, c});
+      sll_assert_each_int(ll, (int[]){c, a, a});
 
       printf("deleting %d\n", a);
       ll = sll_delete(ll, (void *)(&a));
       sll_list(ll);
       assert(sll_list_len(ll) == 2 && "list length unexpected");
-      sll_assert_each_int(ll, (int[]){a, c});
+      sll_assert_each_int(ll, (int[]){c, a});
       sll_nodes_free(ll);
 
       printf("-- %s: ok\n", cse);
@@ -257,21 +298,21 @@ void ds_singly_linked_list(int argc, char **argv) {
       SLLNode *ll = sll_create(sll_cmp_int, sll_print_node_int, sll_free_data,
                                (void *)&a);
 
-      ll = sll_append(ll, (void *)(&a));
-      ll = sll_append(ll, (void *)(&b));
-      ll = sll_append(ll, (void *)(&c));
-      ll = sll_append(ll, (void *)(&d));
+      ll = sll_add(ll, (void *)(&a));
+      ll = sll_add(ll, (void *)(&b));
+      ll = sll_add(ll, (void *)(&c));
+      ll = sll_add(ll, (void *)(&d));
       printf("updating %d\n", a);
 
       ll = sll_update(ll, (void *)(&a), (void *)(&e));
       sll_list(ll);
       assert(sll_list_len(ll) == 5 && "list length unexpected");
-      sll_assert_each_int(ll, (int[]){e, a, b, c, d});
+      sll_assert_each_int(ll, (int[]){d, c, b, e, a});
 
       ll = sll_update(ll, (void *)(&c), (void *)(&f));
       sll_list(ll);
       assert(sll_list_len(ll) == 5 && "list length unexpected");
-      sll_assert_each_int(ll, (int[]){e, a, b, f, d});
+      sll_assert_each_int(ll, (int[]){d, f, b, e, a});
 
       sll_nodes_free(ll);
 
@@ -289,12 +330,12 @@ void ds_singly_linked_list(int argc, char **argv) {
       printf("head: %p\n", ll);
       sll_print_node_str(ll);
 
-      ll = sll_append(ll, (void *)s1_1);
-      ll = sll_append(ll, (void *)s2);
+      ll = sll_add(ll, (void *)s1_1);
+      ll = sll_add(ll, (void *)s2);
       sll_list(ll);
 
       assert(sll_list_len(ll) == 3 && "list length unexpected");
-      sll_assert_each_str(ll, (char *[]){s1, s1_1, s2});
+      sll_assert_each_str(ll, (char *[]){s2, s1_1, s1});
 
       sll_nodes_free(ll);
 

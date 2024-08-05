@@ -42,6 +42,10 @@ SLLNode *sll_create(bool (*cmp)(void *, void *), void (*print)(SLLNode *node),
 // allocs memory
 SLLNode *sll_append(SLLNode *cursor, void *data);
 
+// sll_add creates a new node at the beginning of the linked list and returns
+// that node returns NULL if cursor is NULL allows duplicates allocs memory
+SLLNode *sll_add(SLLNode *cursor, void *data);
+
 // sll_find searches linked list for provided data and returns the first found
 // instance
 // returns NULL if cursor is NULL
@@ -131,6 +135,18 @@ SLLNode *sll_append(SLLNode *cursor, void *data) {
   }
   cur->next = new;
   return cursor;
+}
+
+SLLNode *sll_add(SLLNode *cursor, void *data) {
+  if (!cursor) {
+    return NULL;
+  }
+  SLLNode *new =
+      sll_create(cursor->cmp, cursor->print, cursor->free_data, data);
+
+  new->next = cursor;
+
+  return new;
 }
 
 SLLNode *sll_find(SLLNode *cursor, void *data) {
