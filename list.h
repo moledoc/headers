@@ -834,6 +834,9 @@ StackNode *stack_push(StackNode *cursor, void *data);
 // returns new head, data is returned through `out`
 StackNode *stack_pop(StackNode *cursor, void **out);
 
+// stack_apply executes func fn to each list elements with given argument
+void stack_apply(StackNode *cursor, void (*fn)(StackNode *, void *), void *arg);
+
 #endif // STACK // HEADER
 
 // }
@@ -905,6 +908,13 @@ StackNode *stack_pop(StackNode *cursor, void **out) {
   *out = cursor->data;
   stack_node_free(cursor);
   return new;
+}
+
+void stack_apply(StackNode *cursor, void (*fn)(StackNode *, void *),
+                 void *arg) {
+  for (; cursor != NULL; cursor = cursor->next) {
+    (*fn)(cursor, arg);
+  }
 }
 
 #endif // STACK // IMPLEMENTATION

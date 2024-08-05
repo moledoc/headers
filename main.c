@@ -398,7 +398,8 @@ void ds_singly_linked_list(int argc, char **argv) {
       ll = sll_add(ll, (void *)(&e_cpy));
 
       int inc_coef = 5;
-      sll_apply(ll, sll_apply_print_node_int, "apply -- node ptr '%p'\n");
+      sll_apply(ll, sll_apply_print_node_int,
+                (void *)"apply -- node ptr '%p'\n");
       sll_apply(ll, sll_apply_inc_int, (void *)&inc_coef);
 
       assert(sll_list_len(ll) == 5 && "list length unexpected");
@@ -1108,6 +1109,19 @@ void stack_print_node_str(StackNode *node) {
   ; // force uncompressed formatting (ccls)
 }
 
+void stack_apply_print_node_int(StackNode *node, void *fmt) {
+  printf(fmt, node);
+  return;
+}
+
+void stack_apply_inc_int(StackNode *node, void *d) {
+  if (!node) {
+    return;
+  }
+  *(int *)node->data += *(int *)d;
+  return;
+}
+
 void ds_stack(int argc, char **argv) {
   char *prog_name = shift(&argc, &argv);
 
@@ -1199,9 +1213,9 @@ void ds_stack(int argc, char **argv) {
         assert(stack_list_len(stack) == orig_len - i - 1 &&
                "unexpected list length");
         if (stack) {
-          assert(*(int *)stack->data == exp_stack[6 - i - 1 - 1]);
+          assert(*(int *)stack->data == exp_stack[orig_len - i - 1 - 1]);
         }
-        assert(*(int *)out == exp_stack[6 - i - 1] &&
+        assert(*(int *)out == exp_stack[orig_len - i - 1] &&
                "unexpected value in `out`");
         printf("popped '%d'\n", *(int *)out);
       }
@@ -1233,12 +1247,59 @@ void ds_stack(int argc, char **argv) {
         assert(stack_list_len(stack) == orig_len - i - 1 &&
                "unexpected list length");
         if (stack) {
-          assert(strcmp((char *)stack->data, exp_stack[4 - i - 1 - 1]) == 0);
+          assert(strcmp((char *)stack->data, exp_stack[orig_len - i - 1 - 1]) ==
+                 0);
         }
-        assert(strcmp((char *)out, exp_stack[4 - i - 1]) == 0 &&
+        assert(strcmp((char *)out, exp_stack[orig_len - i - 1]) == 0 &&
                "unexpected value in `out`");
         printf("popped '%s'\n", (char *)out);
       }
+      stack_nodes_free(stack);
+
+      printf("-- %s: ok\n", cse);
+    }
+  }
+
+  {
+    char *cse = "stack_apply";
+    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
+      printf("---- %s\n", cse);
+
+      StackNode *stack = NULL;
+
+      int a_cpy = a;
+      int b_cpy = b;
+      int c_cpy = c;
+      int d_cpy = d;
+      int e_cpy = e;
+
+      stack = stack_create(stack_print_node_int, (void *)&a_cpy);
+      stack = stack_push(stack, (void *)&b_cpy);
+      stack = stack_push(stack, (void *)&c_cpy);
+      stack = stack_push(stack, (void *)&d_cpy);
+      stack = stack_push(stack, (void *)&e_cpy);
+
+      int inc_coef = 5;
+      stack_apply(stack, stack_apply_print_node_int,
+                  (void *)"apply -- node ptr '%p'\n");
+      stack_apply(stack, stack_apply_inc_int, (void *)&inc_coef);
+
+      int exp_stack[] = (int[]){a + inc_coef, b + inc_coef, c + inc_coef,
+                                d + inc_coef, e + inc_coef};
+      size_t orig_len = stack_list_len(stack);
+      for (int i = 0; i < orig_len; ++i) {
+        void *out;
+        stack = stack_pop(stack, &out);
+        assert(stack_list_len(stack) == orig_len - i - 1 &&
+               "unexpected list length");
+        if (stack) {
+          assert(*(int *)stack->data == exp_stack[orig_len - i - 1 - 1]);
+        }
+        assert(*(int *)out == exp_stack[orig_len - i - 1] &&
+               "unexpected value in `out`");
+        printf("popped '%d'\n", *(int *)out);
+      }
+
       stack_nodes_free(stack);
 
       printf("-- %s: ok\n", cse);
