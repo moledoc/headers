@@ -1335,6 +1335,19 @@ void queue_print_node_str(QueueNode *node) {
   ; // force uncompressed formatting (ccls)
 }
 
+void queue_apply_print_node_int(QueueNode *node, void *fmt) {
+  printf(fmt, node);
+  return;
+}
+
+void queue_apply_inc_int(QueueNode *node, void *d) {
+  if (!node) {
+    return;
+  }
+  *(int *)node->data += *(int *)d;
+  return;
+}
+
 void ds_queue(int argc, char **argv) {
   char *prog_name = shift(&argc, &argv);
 
@@ -1465,6 +1478,52 @@ void ds_queue(int argc, char **argv) {
                "unexpected value in `out`");
         printf("popped '%s'\n", (char *)out);
       }
+      queue_nodes_free(queue);
+
+      printf("-- %s: ok\n", cse);
+    }
+  }
+
+  {
+    char *cse = "queue_apply";
+    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
+      printf("---- %s\n", cse);
+
+      QueueNode *queue = NULL;
+
+      int a_cpy = a;
+      int b_cpy = b;
+      int c_cpy = c;
+      int d_cpy = d;
+      int e_cpy = e;
+
+      queue = queue_create(queue_print_node_int, (void *)&a_cpy);
+      queue = queue_push(queue, (void *)&b_cpy);
+      queue = queue_push(queue, (void *)&c_cpy);
+      queue = queue_push(queue, (void *)&d_cpy);
+      queue = queue_push(queue, (void *)&e_cpy);
+
+      int inc_coef = 5;
+      queue_apply(queue, queue_apply_print_node_int,
+                  (void *)"apply -- node ptr '%p'\n");
+      queue_apply(queue, queue_apply_inc_int, (void *)&inc_coef);
+
+      int exp_queue[] = (int[]){e + inc_coef, d + inc_coef, c + inc_coef,
+                                b + inc_coef, a + inc_coef};
+      size_t orig_len = queue_list_len(queue);
+      for (int i = 0; i < orig_len; ++i) {
+        void *out;
+        queue = queue_pop(queue, &out);
+        assert(queue_list_len(queue) == orig_len - i - 1 &&
+               "unexpected list length");
+        if (queue) {
+          assert(*(int *)queue->data == exp_queue[orig_len - i - 1 - 1]);
+        }
+        assert(*(int *)out == exp_queue[orig_len - i - 1] &&
+               "unexpected value in `out`");
+        printf("popped '%d'\n", *(int *)out);
+      }
+
       queue_nodes_free(queue);
 
       printf("-- %s: ok\n", cse);

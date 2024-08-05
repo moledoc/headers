@@ -963,6 +963,9 @@ QueueNode *queue_push(QueueNode *cursor, void *data);
 // returns new head, data is returned through `out`
 QueueNode *queue_pop(QueueNode *cursor, void **out);
 
+// queue_apply executes func fn to each list elements with given argument
+void queue_apply(QueueNode *cursor, void (*fn)(QueueNode *, void *), void *arg);
+
 #endif // QUEUE // HEADER
 
 // }
@@ -1038,6 +1041,13 @@ QueueNode *queue_pop(QueueNode *cursor, void **out) {
   *out = cursor->data;
   queue_node_free(cursor);
   return new;
+}
+
+void queue_apply(QueueNode *cursor, void (*fn)(QueueNode *, void *),
+                 void *arg) {
+  for (; cursor != NULL; cursor = cursor->next) {
+    (*fn)(cursor, arg);
+  }
 }
 
 #endif // QUEUE // IMPLEMENTATION
