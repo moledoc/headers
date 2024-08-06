@@ -97,6 +97,7 @@ void sll_apply_inc_int(SLLNode *cursor, void *d) {
   return;
 }
 
+// TODO: test data for setting up and asserting should be separated
 // NOTE: run valgrind to make sure there are no leaks
 void ds_singly_linked_list(int argc, char **argv) {
   char *prog_name = shift(&argc, &argv);
@@ -240,6 +241,61 @@ void ds_singly_linked_list(int argc, char **argv) {
       }
       if (expected_int != NULL) {
         free(expected_int);
+      }
+      ll = sll_nodes_free(ll);
+
+      printf("-- %s: ok\n", cse);
+    }
+  }
+
+  {
+    char *cse = "sll_apply";
+    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
+      printf("---- %s\n", cse);
+
+      size_t expected_int_size = 10;
+      DatasInt *expected_int = malloc(1 * sizeof(DatasInt));
+      expected_int->ds = calloc(expected_int_size, sizeof(int));
+      expected_int->size = expected_int_size;
+      for (int i = 0; i < expected_int->size; ++i) {
+        expected_int->ds[i] = i;
+      }
+
+      SLLNode *ll = sll_create(sll_cmp_int, (void *)&expected_int->ds[0]);
+      for (int i = 1; i < expected_int->size; ++i) {
+        SLLNode *tmp = sll_add(ll, (void *)&expected_int->ds[i]);
+        assert(tmp != ll && "unexpected eqaulity of ptrs");
+        ll = tmp;
+      }
+
+      int inc_coef = 5;
+      DatasInt *expected_int_assert = malloc(1 * sizeof(DatasInt));
+      expected_int_assert->ds = calloc(expected_int_size, sizeof(int));
+      expected_int_assert->size = expected_int_size;
+      for (int i = 0; i < expected_int_assert->size; ++i) {
+        expected_int_assert->ds[i] = i + inc_coef;
+      }
+
+      sll_apply(ll, sll_apply_print_node_int, (void *)"node ptr -- %p\n");
+
+      printf("before incrementing\n");
+      sll_list(ll, sll_print_node_int, NULL);
+      sll_apply(ll, sll_apply_inc_int, (void *)&inc_coef);
+      sll_apply(ll, sll_assert_node_int_reverse, expected_int_assert);
+      printf("after incrementing\n");
+      sll_list(ll, sll_print_node_int, NULL);
+
+      if (expected_int != NULL && expected_int->ds != NULL) {
+        free(expected_int->ds);
+      }
+      if (expected_int != NULL) {
+        free(expected_int);
+      }
+      if (expected_int_assert != NULL && expected_int_assert->ds != NULL) {
+        free(expected_int_assert->ds);
+      }
+      if (expected_int_assert != NULL) {
+        free(expected_int_assert);
       }
       ll = sll_nodes_free(ll);
 
