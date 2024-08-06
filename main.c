@@ -423,9 +423,9 @@ void ds_singly_linked_list(int argc, char **argv) {
       val_node = sll_update(NULL, NULL, NULL);
       assert(val_node == NULL && "unexpected non-NULL");
       val_node = sll_update(ll, NULL, (void *)&expected_int->ds[0]);
-      assert(val_node == NULL && "unexpected non-NULL");
+      assert(val_node == ll && "list ptrs differ");
       val_node = sll_update(ll, (void *)&expected_int->ds[0], NULL);
-      assert(val_node == NULL && "unexpected non-NULL");
+      assert(val_node == ll && "list ptrs differ");
       assert(sll_list_len(ll) == 1 && "unexpected length mismatch");
 
       // data prep
@@ -453,6 +453,64 @@ void ds_singly_linked_list(int argc, char **argv) {
                          // because we modified data in underlying mem addresses
                          // i.e. data in expected_int and linked list has the
                          // same orientation
+
+      if (expected_int != NULL && expected_int->ds != NULL) {
+        free(expected_int->ds);
+      }
+      if (expected_int != NULL) {
+        free(expected_int);
+      }
+      ll = sll_nodes_free(ll);
+
+      printf("-- %s: ok\n", cse);
+    }
+  }
+
+  {
+    char *cse = "sll_delete";
+    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
+      printf("---- %s\n", cse);
+
+      size_t expected_int_size = 10;
+      DatasInt *expected_int = malloc(1 * sizeof(DatasInt));
+      expected_int->ds = calloc(expected_int_size, sizeof(int));
+      expected_int->size = expected_int_size;
+      for (int i = 0; i < expected_int->size; ++i) {
+        expected_int->ds[i] = i;
+      }
+
+      SLLNode *ll = sll_create(sll_cmp_int, (void *)&expected_int->ds[0]);
+
+      // validation
+      SLLNode *val_node = sll_delete(NULL, (void *)&expected_int->ds[0]);
+      assert(val_node == NULL && "unexpected non-NULL");
+      val_node = sll_delete(NULL, NULL);
+      assert(val_node == NULL && "unexpected non-NULL");
+      val_node = sll_delete(ll, NULL);
+      assert(val_node == ll && "list ptrs differ");
+      assert(sll_list_len(ll) == 1 && "unexpected length mismatch");
+
+      // data prep
+      for (int i = 1; i < expected_int->size; ++i) {
+        SLLNode *tmp = sll_add(ll, (void *)&expected_int->ds[i]);
+        assert(tmp != ll && "unexpected eqaulity of ptrs");
+        ll = tmp;
+      }
+
+      // functionality
+      size_t orig_ll_len = sll_list_len(ll);
+      for (int i = 0, iters_count = 0; iters_count < expected_int->size;
+           i = (i + 3) % expected_int->size, ++iters_count) {
+        printf("list before deleting '%d'\n", expected_int->ds[i]);
+        sll_list(ll, sll_print_node_int, NULL);
+        ll = sll_delete(ll, (void *)&expected_int->ds[i]);
+        assert(sll_list_len(ll) == orig_ll_len - iters_count - 1 &&
+               "unexpected list length");
+        SLLNode *n = sll_find(ll, (void *)&expected_int->ds[i]);
+        assert(n == NULL && "expected not found, but data was found");
+        printf("list after deleting '%d'\n", expected_int->ds[i]);
+        sll_list(ll, sll_print_node_int, NULL);
+      }
 
       if (expected_int != NULL && expected_int->ds != NULL) {
         free(expected_int->ds);

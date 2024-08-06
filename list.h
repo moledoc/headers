@@ -170,10 +170,10 @@ SLLNode *sll_update(SLLNode *cursor, void *old_data, void *new_data) {
     return NULL;
   }
   if (old_data == NULL) {
-    return NULL;
+    return cursor;
   }
   if (new_data == NULL) {
-    return NULL;
+    return cursor;
   }
   SLLNode *cur = cursor;
   for (; cur != NULL && !cur->cmp(cur->data, old_data); cur = cur->next) {
