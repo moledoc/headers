@@ -29,7 +29,7 @@ SLLNode *sll_node_free(SLLNode *cursor);
 
 // sll_free_nodes frees the entire linked list
 // frees memory
-void sll_nodes_free(SLLNode *cursor);
+void *sll_nodes_free(SLLNode *cursor);
 
 // sll_create prepares a new node with all the helper functions
 // returns NULL if at least one argument is not properly provided
@@ -100,11 +100,11 @@ SLLNode *sll_node_free(SLLNode *cursor) {
   return cursor;
 }
 
-void sll_nodes_free(SLLNode *cursor) {
+void *sll_nodes_free(SLLNode *cursor) {
   for (; cursor != NULL;) {
     cursor = sll_node_free(cursor);
   }
-  return;
+  return NULL;
 }
 
 SLLNode *sll_create(bool (*cmp)(void *, void *), void *data) {
@@ -122,6 +122,9 @@ SLLNode *sll_append(SLLNode *cursor, void *data) {
   if (cursor == NULL) {
     return NULL;
   }
+  if (data == NULL) {
+    return cursor;
+  }
   SLLNode *new = sll_create(cursor->cmp, data);
 
   SLLNode *cur = cursor;
@@ -136,12 +139,18 @@ SLLNode *sll_add(SLLNode *cursor, void *data) {
   if (cursor == NULL) {
     return NULL;
   }
+  if (data == NULL) {
+    return cursor;
+  }
   SLLNode *new = sll_create(cursor->cmp, data);
   new->next = cursor;
   return new;
 }
 
 SLLNode *sll_find(SLLNode *cursor, void *data) {
+  if (data == NULL) {
+    return NULL;
+  }
   for (; cursor != NULL; cursor = cursor->next) {
     if (cursor->cmp(cursor->data, data)) {
       return cursor;
@@ -154,6 +163,9 @@ SLLNode *sll_update(SLLNode *cursor, void *old_data, void *new_data) {
   if (cursor == NULL) {
     return NULL;
   }
+  if (new_data == NULL) {
+    return cursor;
+  }
   SLLNode *cur = cursor;
   for (; cur != NULL && !cur->cmp(cur->data, old_data); cur = cur->next) {
     ;
@@ -165,6 +177,9 @@ SLLNode *sll_update(SLLNode *cursor, void *old_data, void *new_data) {
 SLLNode *sll_delete(SLLNode *cursor, void *data) {
   if (cursor == NULL) {
     return NULL;
+  }
+  if (data == NULL) {
+    return cursor;
   }
   SLLNode *cur = cursor;
   SLLNode *prev = NULL;

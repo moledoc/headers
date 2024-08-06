@@ -15,19 +15,170 @@
 
 #include "list.h"
 
+bool sll_cmp_int(void *a, void *b) { return *(int *)a == *(int *)b; }
+bool sll_cmp_str(void *a, void *b) { return strcmp((char *)a, (char *)b) == 0; }
+
 void sll_print_node_int(SLLNode *node, void *_) {
   printf("-> (%p) data:%d\n", node, *(int *)(node->data));
-  ; // force uncompressed formatting (ccls)
 }
 
 void sll_print_node_str(SLLNode *node, void *_) {
   printf("-> (%p) data:'%s'\n", node, (char *)(node->data));
-  ; // force uncompressed formatting (ccls)
 }
 
-bool sll_cmp_int(void *a, void *b) { return *(int *)a == *(int *)b; }
+void sll_free_data(SLLNode *node, void *_) {
+  if (node != NULL && node->data != NULL) {
+    free(node->data);
+  }
+}
 
-bool sll_cmp_str(void *a, void *b) { return strcmp((char *)a, (char *)b) == 0; }
+typedef struct {
+  int *ds;
+  size_t size;
+} DatasInt;
+
+void sll_assert_node_int(SLLNode *node, void *datas) {
+  if (((DatasInt *)datas)->size == 0) {
+    return;
+  }
+  int *ds = ((DatasInt *)datas)->ds;
+  assert(*(int *)node->data == *ds && "data mismatch");
+  memmove(((DatasInt *)datas)->ds, ds + 1, ((DatasInt *)datas)->size - 1);
+  --((DatasInt *)datas)->size;
+  return;
+}
+
+typedef struct {
+  char **ds;
+  size_t size;
+} DatasStr;
+
+void sll_assert_node_str(SLLNode *node, void *datas) {
+  if (((DatasStr *)datas)->size == 0) {
+    return;
+  }
+  char **ds = ((DatasStr *)datas)->ds;
+  assert(strcmp((char *)node->data, *ds) == 0 && "data mismatch");
+  memmove(((DatasStr *)datas)->ds, ds + 1, ((DatasStr *)datas)->size - 1);
+  --((DatasStr *)datas)->size;
+  return;
+}
+
+void sll_apply_print_node_int(SLLNode *cursor, void *fmt) {
+  printf(fmt, cursor);
+  return;
+}
+
+void sll_apply_inc_int(SLLNode *cursor, void *d) {
+  if (!cursor) {
+    return;
+  }
+  *(int *)cursor->data += *(int *)d;
+  return;
+}
+
+// NOTE: run valgrind to make sure there are no leaks
+void ds_singly_linked_list(int argc, char **argv) {
+  char *prog_name = shift(&argc, &argv);
+
+  char *run = "";
+  for (; argc > 0;) {
+    char *arg = shift(&argc, &argv);
+    if (strcmp("--run", arg) == 0 && argc > 0) {
+      run = shift(&argc, &argv);
+    }
+  }
+
+  {
+    char *cse = "sll_create";
+    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
+      printf("---- %s\n", cse);
+
+      SLLNode *ll = NULL;
+      DatasInt *expected_int = NULL;
+      DatasStr *expected_str = NULL;
+
+      int a = 1;
+
+      // input validation
+      ll = sll_create(NULL, NULL);
+      assert(ll == NULL && "unexpected non-NULL");
+      ll = sll_create(NULL, (void *)&a);
+      assert(ll == NULL && "unexpected non-NULL");
+      ll = sll_create(sll_cmp_int, NULL);
+      assert(ll == NULL && "unexpected non-NULL");
+
+      // functionality int
+      ll = sll_create(sll_cmp_int, (void *)&a);
+      sll_list(ll, sll_print_node_int, NULL);
+
+      assert(sll_list_len(ll) == 1 && "unexpected list length");
+      expected_int = malloc(1 * sizeof(DatasInt));
+      expected_int->ds = (int[]){a};
+      expected_int->size =
+          sizeof(expected_int->ds) / sizeof(expected_int->ds[0]);
+      sll_apply(ll, sll_assert_node_int, expected_int);
+      free(expected_int);
+
+      ll = sll_nodes_free(ll);
+      ll = sll_nodes_free(ll); // duplicate free should work if we use returned
+                               // ll from sll_nodes_free
+
+      // functionality int alloced
+      int *a_alloced = malloc(1 * sizeof(int));
+      *a_alloced = a;
+      ll = sll_create(sll_cmp_int, (void *)a_alloced);
+      sll_list(ll, sll_print_node_int, NULL);
+
+      assert(sll_list_len(ll) == 1 && "unexpected list length");
+      expected_int = malloc(1 * sizeof(DatasInt));
+      expected_int->ds = (int[]){a};
+      expected_int->size =
+          sizeof(expected_int->ds) / sizeof(expected_int->ds[0]);
+      sll_apply(ll, sll_assert_node_int, expected_int);
+      free(expected_int);
+
+      sll_apply(ll, sll_free_data, NULL);
+      ll = sll_nodes_free(ll);
+
+      // functionality str
+      char *a_str = "a";
+      ll = sll_create(sll_cmp_str, (void *)a_str);
+      sll_list(ll, sll_print_node_str, NULL);
+
+      assert(sll_list_len(ll) == 1 && "unexpected list length");
+      expected_str = malloc(1 * sizeof(DatasInt));
+      expected_str->ds = (char *[]){a_str};
+      expected_str->size =
+          sizeof(expected_str->ds) / sizeof(expected_str->ds[0]);
+      sll_apply(ll, sll_assert_node_str, expected_str);
+      free(expected_str);
+
+      ll = sll_nodes_free(ll);
+      ll = sll_nodes_free(ll); // duplicate free should work if we use returned
+                               // ll from sll_nodes_free
+
+      // functionality str alloced
+      char *a_str_alloced = calloc((strlen(a_str) + 1), sizeof(char));
+      memcpy(a_str_alloced, a_str, strlen(a_str));
+      ll = sll_create(sll_cmp_str, (void *)a_str_alloced);
+      sll_list(ll, sll_print_node_str, NULL);
+
+      assert(sll_list_len(ll) == 1 && "unexpected list length");
+      expected_str = malloc(1 * sizeof(DatasStr));
+      expected_str->ds = (char *[]){a_str};
+      expected_str->size =
+          sizeof(expected_str->ds) / sizeof(expected_str->ds[0]);
+      sll_apply(ll, sll_assert_node_str, expected_str);
+      free(expected_str);
+
+      sll_apply(ll, sll_free_data, NULL);
+      ll = sll_nodes_free(ll);
+
+      printf("-- %s: ok\n", cse);
+    }
+  }
+}
 
 void sll_free_data(void *data) { ; }
 
@@ -79,20 +230,7 @@ void sll_assert_each_str(SLLNode *cursor, char **datas) {
   return;
 }
 
-void sll_apply_print_node_int(SLLNode *cursor, void *fmt) {
-  printf(fmt, cursor);
-  return;
-}
-
-void sll_apply_inc_int(SLLNode *cursor, void *d) {
-  if (!cursor) {
-    return;
-  }
-  *(int *)cursor->data += *(int *)d;
-  return;
-}
-
-void ds_singly_linked_list(int argc, char **argv) {
+void ds_singly_linked_list0(int argc, char **argv) {
   char *prog_name = shift(&argc, &argv);
 
   int a = 1;
@@ -151,6 +289,11 @@ void ds_singly_linked_list(int argc, char **argv) {
       SLLNode *ll = NULL;
       ll = sll_append(NULL, (void *)&a);
       assert(!ll && "should be NULL");
+
+      ll = sll_create(sll_cmp_int, (void *)&a);
+      ll = sll_append(ll, NULL);
+      assert(sll_list_len(ll) == 1 && "unexpected list len");
+
       sll_nodes_free(ll);
 
       printf("-- %s: ok\n", cse);
@@ -191,6 +334,11 @@ void ds_singly_linked_list(int argc, char **argv) {
       SLLNode *ll = NULL;
       ll = sll_add(NULL, (void *)&a);
       assert(!ll && "should be NULL");
+
+      ll = sll_create(sll_cmp_int, (void *)&a);
+      ll = sll_add(ll, NULL);
+      assert(sll_list_len(ll) == 1 && "unexpected list len");
+
       sll_nodes_free(ll);
 
       printf("-- %s: ok\n", cse);
@@ -231,6 +379,12 @@ void ds_singly_linked_list(int argc, char **argv) {
       SLLNode *n = sll_find(NULL, (void *)(&c));
       assert(!n && "expected NULL");
 
+      SLLNode *ll = sll_create(sll_cmp_int, (void *)&a);
+      n = sll_find(ll, NULL);
+      assert(n == NULL && "unexpected non-NULL");
+
+      sll_nodes_free(ll);
+
       printf("-- %s: ok\n", cse);
     }
   }
@@ -259,6 +413,12 @@ void ds_singly_linked_list(int argc, char **argv) {
       printf("---- %s\n", cse);
       SLLNode *ll = sll_delete(NULL, (void *)(&a));
       assert(!ll && "expected NULL");
+
+      ll = sll_create(sll_cmp_int, (void *)&a);
+      ll = sll_delete(ll, NULL);
+      assert(sll_list_len(ll) == 1 && "unexpected list len");
+
+      sll_nodes_free(ll);
 
       printf("-- %s: ok\n", cse);
     }
