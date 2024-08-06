@@ -15,61 +15,72 @@
 
 #include "list.h"
 
-void sll_print_node_int(SLLNode *node) {
-  printf("(%p) data:%d\n", node, *(int *)(node->data));
-  ; // force uncompressed formatting (ccls)
-}
-
-void sll_print_node_str(SLLNode *node) {
-  printf("(%p) data:'%s'\n", node, (char *)(node->data));
-  ; // force uncompressed formatting (ccls)
-}
-
 bool sll_cmp_int(void *a, void *b) { return *(int *)a == *(int *)b; }
-
 bool sll_cmp_str(void *a, void *b) { return strcmp((char *)a, (char *)b) == 0; }
 
-void sll_free_data(void *data) { ; }
-
-SLLNode *sll_assert_next_int(SLLNode *cursor, int d) {
-  if (!cursor) {
-    return NULL;
-  }
-  if (*(int *)cursor->data != d) {
-    printf("[ERROR]: int data doesn't match: expected '%d', got '%d'\n", d,
-           *(int *)cursor->data);
-    assert(*(int *)cursor->data == d);
-  }
-  return cursor->next;
+void sll_print_node_int(SLLNode *node, void *_) {
+  printf("-> (%p) data:%d\n", node, *(int *)(node->data));
+  return;
 }
 
-void sll_assert_each_int(SLLNode *cursor, int datas[]) {
-  int i = 0;
-  for (SLLNode *cur = cursor; cur;
-       cur = sll_assert_next_int(cur, datas[i]), ++i) {
-    ;
+void sll_print_node_str(SLLNode *node, void *_) {
+  printf("-> (%p) data:'%s'\n", node, (char *)(node->data));
+  return;
+}
+
+void sll_free_data(SLLNode *node, void *_) {
+  if (node != NULL && node->data != NULL) {
+    free(node->data);
   }
   return;
 }
 
-SLLNode *sll_assert_next_str(SLLNode *cursor, char *d) {
-  if (!cursor) {
-    return NULL;
+typedef struct {
+  int *ds;
+  size_t size;
+} DatasInt;
+
+void sll_assert_node_int(SLLNode *node, void *datas) {
+  size_t nodes_count = sll_list_len(node);
+  if (nodes_count == 0) {
+    return;
   }
-  if (!sll_cmp_str(cursor->data, d)) {
-    printf("[ERROR]: str data doesn't match: expected '%s', got '%s'\n", d,
-           (char *)cursor->data);
-    assert(sll_cmp_str(cursor->data, d));
-  }
-  return cursor->next;
+
+  int *ds = ((DatasInt *)datas)->ds;
+  size_t ds_size = ((DatasInt *)datas)->size;
+  size_t offset = ds_size - nodes_count;
+  assert(*(int *)node->data == ds[ds_size - nodes_count] && "data mismatch");
+  // NOTE: can't use memmove, as it moves data between mem addresses
+  return;
 }
 
-void sll_assert_each_str(SLLNode *cursor, char **datas) {
-  int i = 0;
-  for (SLLNode *cur = cursor; cur;
-       cur = sll_assert_next_str(cur, datas[i]), ++i) {
-    ;
+void sll_assert_node_int_reverse(SLLNode *node, void *datas) {
+  if (((DatasInt *)datas)->size == 0) {
+    return;
   }
+  int *ds = ((DatasInt *)datas)->ds;
+  assert(*(int *)node->data == (ds[((DatasInt *)datas)->size - 1]) &&
+         "data mismatch");
+  // NOTE: memmove in this case is ok, as we're not actually moving data to
+  // different mem address
+  memmove(((DatasInt *)datas)->ds, ds, ((DatasInt *)datas)->size - 1);
+  --((DatasInt *)datas)->size;
+  return;
+}
+
+typedef struct {
+  char **ds;
+  size_t size;
+} DatasStr;
+
+void sll_assert_node_str(SLLNode *node, void *datas) {
+  if (((DatasStr *)datas)->size == 0) {
+    return;
+  }
+  char **ds = ((DatasStr *)datas)->ds;
+  assert(strcmp((char *)node->data, *ds) == 0 && "data mismatch");
+  memmove(((DatasStr *)datas)->ds, ds + 1, ((DatasStr *)datas)->size - 1);
+  --((DatasStr *)datas)->size;
   return;
 }
 
@@ -86,20 +97,9 @@ void sll_apply_inc_int(SLLNode *cursor, void *d) {
   return;
 }
 
+// NOTE: run valgrind to make sure there are no leaks
 void ds_singly_linked_list(int argc, char **argv) {
   char *prog_name = shift(&argc, &argv);
-
-  int a = 1;
-  int b = 2;
-  int c = 3;
-  int d = 4;
-  int e = 5;
-  int f = 6;
-  int g = 7;
-
-  char *s1 = "test";
-  char *s1_1 = "test";
-  char *s2 = "test2";
 
   char *run = "";
   for (; argc > 0;) {
@@ -110,88 +110,88 @@ void ds_singly_linked_list(int argc, char **argv) {
   }
 
   {
-    char *cse = "sll_create_validation";
-    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
-      printf("---- %s\n", cse);
-      SLLNode *ll = NULL;
-      ll = sll_create(NULL, sll_print_node_int, sll_free_data, (void *)&a);
-      assert(!ll);
-      ll = sll_create(sll_cmp_int, NULL, sll_free_data, (void *)&a);
-      assert(!ll);
-      ll = sll_create(sll_cmp_int, sll_print_node_int, NULL, (void *)&a);
-      assert(!ll);
-      ll = sll_create(sll_cmp_int, sll_print_node_int, sll_free_data, NULL);
-      assert(!ll);
-      sll_nodes_free(ll);
-
-      printf("-- %s: ok\n", cse);
-    }
-  }
-
-  {
     char *cse = "sll_create";
     if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
       printf("---- %s\n", cse);
-      SLLNode *ll = sll_create(sll_cmp_int, sll_print_node_int, sll_free_data,
-                               (void *)&a);
-      sll_list(ll);
-      sll_assert_next_int(ll, a);
-      sll_nodes_free(ll);
-
-      printf("-- %s: ok\n", cse);
-    }
-  }
-
-  {
-    char *cse = "sll_append_validate";
-    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
-      printf("---- %s\n", cse);
 
       SLLNode *ll = NULL;
-      ll = sll_append(NULL, (void *)&a);
-      assert(!ll && "should be NULL");
-      sll_nodes_free(ll);
+      DatasInt *expected_int = NULL;
+      DatasStr *expected_str = NULL;
 
-      printf("-- %s: ok\n", cse);
-    }
-  }
+      int a = 1;
 
-  {
-    char *cse = "sll_append";
-    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
-      printf("---- %s\n", cse);
+      // input validation
+      ll = sll_create(NULL, NULL);
+      assert(ll == NULL && "unexpected non-NULL");
+      ll = sll_create(NULL, (void *)&a);
+      assert(ll == NULL && "unexpected non-NULL");
+      ll = sll_create(sll_cmp_int, NULL);
+      assert(ll == NULL && "unexpected non-NULL");
 
-      SLLNode *ll = NULL;
+      // functionality int
+      ll = sll_create(sll_cmp_int, (void *)&a);
+      sll_list(ll, sll_print_node_int, NULL);
 
-      ll = sll_create(sll_cmp_int, sll_print_node_int, sll_free_data,
-                      (void *)&a);
-      printf("head: %p\n", ll);
-      sll_print_node_int(ll);
-      sll_list(ll);
-      ll = sll_append(ll, (void *)(&b));
-      sll_list(ll);
-      ll = sll_append(ll, (void *)(&c));
-      ll = sll_append(ll, (void *)(&d));
-      ll = sll_append(ll, (void *)(&e));
-      sll_list(ll);
+      assert(sll_list_len(ll) == 1 && "unexpected list length");
+      expected_int = malloc(1 * sizeof(DatasInt));
+      expected_int->ds = (int[]){a};
+      expected_int->size = 1; // TODO: non-hardcoded size
+      sll_apply(ll, sll_assert_node_int, expected_int);
+      free(expected_int);
 
-      assert(sll_list_len(ll) == 5 && "unexpected list length");
-      sll_assert_each_int(ll, (int[]){a, b, c, d, e});
-      sll_nodes_free(ll);
+      ll = sll_nodes_free(ll);
+      ll = sll_nodes_free(ll); // duplicate free should work if we use returned
+                               // ll from sll_nodes_free
 
-      printf("-- %s: ok\n", cse);
-    }
-  }
+      // functionality int alloced
+      int *a_alloced = malloc(1 * sizeof(int));
+      *a_alloced = a;
+      ll = sll_create(sll_cmp_int, (void *)a_alloced);
+      sll_list(ll, sll_print_node_int, NULL);
 
-  {
-    char *cse = "sll_add_validate";
-    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
-      printf("---- %s\n", cse);
+      assert(sll_list_len(ll) == 1 && "unexpected list length");
+      expected_int = malloc(1 * sizeof(DatasInt));
+      expected_int->ds = (int[]){a};
+      expected_int->size = 1; // TODO: non-hardcoded size
+      sll_apply(ll, sll_assert_node_int, expected_int);
+      free(expected_int);
 
-      SLLNode *ll = NULL;
-      ll = sll_add(NULL, (void *)&a);
-      assert(!ll && "should be NULL");
-      sll_nodes_free(ll);
+      sll_apply(ll, sll_free_data, NULL);
+      ll = sll_nodes_free(ll);
+
+      // functionality str
+      char *a_str = "a";
+      ll = sll_create(sll_cmp_str, (void *)a_str);
+      sll_list(ll, sll_print_node_str, NULL);
+
+      assert(sll_list_len(ll) == 1 && "unexpected list length");
+      expected_str = malloc(1 * sizeof(DatasInt));
+      expected_str->ds = (char *[]){a_str};
+      expected_str->size =
+          sizeof(expected_str->ds) / sizeof(expected_str->ds[0]);
+      sll_apply(ll, sll_assert_node_str, expected_str);
+      free(expected_str);
+
+      ll = sll_nodes_free(ll);
+      ll = sll_nodes_free(ll); // duplicate free should work if we use returned
+                               // ll from sll_nodes_free
+
+      // functionality str alloced
+      char *a_str_alloced = calloc((strlen(a_str) + 1), sizeof(char));
+      memcpy(a_str_alloced, a_str, strlen(a_str));
+      ll = sll_create(sll_cmp_str, (void *)a_str_alloced);
+      sll_list(ll, sll_print_node_str, NULL);
+
+      assert(sll_list_len(ll) == 1 && "unexpected list length");
+      expected_str = malloc(1 * sizeof(DatasStr));
+      expected_str->ds = (char *[]){a_str};
+      expected_str->size =
+          sizeof(expected_str->ds) / sizeof(expected_str->ds[0]);
+      sll_apply(ll, sll_assert_node_str, expected_str);
+      free(expected_str);
+
+      sll_apply(ll, sll_free_data, NULL);
+      ll = sll_nodes_free(ll);
 
       printf("-- %s: ok\n", cse);
     }
@@ -202,177 +202,46 @@ void ds_singly_linked_list(int argc, char **argv) {
     if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
       printf("---- %s\n", cse);
 
-      SLLNode *ll = NULL;
+      size_t expected_int_size = 10;
+      DatasInt *expected_int = malloc(1 * sizeof(DatasInt));
+      expected_int->ds = calloc(expected_int_size, sizeof(int));
+      expected_int->size = expected_int_size;
+      for (int i = 0; i < expected_int->size; ++i) {
+        expected_int->ds[i] = i;
+      }
 
-      ll = sll_create(sll_cmp_int, sll_print_node_int, sll_free_data,
-                      (void *)&a);
-      printf("head: %p\n", ll);
-      sll_print_node_int(ll);
-      sll_list(ll);
-      ll = sll_add(ll, (void *)(&b));
-      sll_list(ll);
-      ll = sll_add(ll, (void *)(&c));
-      ll = sll_add(ll, (void *)(&d));
-      ll = sll_add(ll, (void *)(&e));
-      sll_list(ll);
+      SLLNode *ll = sll_create(sll_cmp_int, (void *)&expected_int->ds[0]);
 
-      assert(sll_list_len(ll) == 5 && "unexpected list length");
-      sll_assert_each_int(ll, (int[]){e, d, c, b, a});
-      sll_nodes_free(ll);
+      // validation
+      SLLNode *val_node = sll_add(NULL, (void *)&expected_int->ds[0]);
+      assert(val_node == NULL && "unexpected non-NULL");
+      val_node = sll_add(NULL, NULL);
+      assert(val_node == NULL && "unexpected non-NULL");
+      val_node = sll_add(ll, NULL);
+      assert(val_node == ll && "unexpected linked list ptr mismatch");
+      assert(sll_list_len(ll) == 1 && "unexpected length mismatch");
 
-      printf("-- %s: ok\n", cse);
-    }
-  }
+      // functionality
+      for (int i = 1; i < expected_int->size; ++i) {
+        SLLNode *tmp = sll_add(ll, (void *)&expected_int->ds[i]);
+        assert(tmp != ll && "unexpected eqaulity of ptrs");
+        ll = tmp;
+      }
+      sll_list(ll, sll_print_node_int, NULL);
+      assert(sll_list_len(ll) == expected_int->size &&
+             "unexpected length mismatch");
+      sll_apply(ll, sll_assert_node_int_reverse, expected_int);
+      sll_apply(ll, sll_assert_node_int_reverse,
+                expected_int); // NOTE: duplicate apply to show memmove is safe
+                               // with add
 
-  {
-    char *cse = "sll_find_validate";
-    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
-      printf("---- %s\n", cse);
-
-      SLLNode *n = sll_find(NULL, (void *)(&c));
-      assert(!n && "expected NULL");
-
-      printf("-- %s: ok\n", cse);
-    }
-  }
-
-  {
-    char *cse = "sll_find";
-    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
-      printf("---- %s\n", cse);
-      SLLNode *ll = sll_create(sll_cmp_int, sll_print_node_int, sll_free_data,
-                               (void *)&a);
-      ll = sll_add(ll, (void *)(&b));
-      ll = sll_add(ll, (void *)(&c));
-      ll = sll_add(ll, (void *)(&d));
-      SLLNode *n = sll_find(ll, (void *)(&c));
-      printf("found node: ");
-      sll_print_node_int(n);
-      sll_assert_next_int(n, c);
-      sll_nodes_free(ll);
-
-      printf("-- %s: ok\n", cse);
-    }
-  }
-
-  {
-    char *cse = "sll_delete_validation";
-    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
-      printf("---- %s\n", cse);
-      SLLNode *ll = sll_delete(NULL, (void *)(&a));
-      assert(!ll && "expected NULL");
-
-      printf("-- %s: ok\n", cse);
-    }
-  }
-
-  {
-    char *cse = "sll_delete";
-    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
-      printf("---- %s\n", cse);
-      SLLNode *ll = sll_create(sll_cmp_int, sll_print_node_int, sll_free_data,
-                               (void *)&a);
-      ll = sll_add(ll, (void *)(&a));
-      ll = sll_add(ll, (void *)(&b));
-      ll = sll_add(ll, (void *)(&c));
-
-      printf("deleting %d\n", b);
-      ll = sll_delete(ll, (void *)(&b));
-      sll_list(ll);
-      assert(sll_list_len(ll) == 3 && "list length unexpected");
-      sll_assert_each_int(ll, (int[]){c, a, a});
-
-      printf("deleting %d\n", a);
-      ll = sll_delete(ll, (void *)(&a));
-      sll_list(ll);
-      assert(sll_list_len(ll) == 2 && "list length unexpected");
-      sll_assert_each_int(ll, (int[]){c, a});
-      sll_nodes_free(ll);
-
-      printf("-- %s: ok\n", cse);
-    }
-  }
-
-  {
-    char *cse = "sll_update_validation";
-    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
-      printf("---- %s\n", cse);
-      SLLNode *ll = sll_update(NULL, (void *)(&a), (void *)(&b));
-      assert(!ll && "expected NULL");
-
-      printf("-- %s: ok\n", cse);
-    }
-  }
-
-  {
-    char *cse = "sll_update";
-    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
-      printf("---- %s\n", cse);
-      SLLNode *ll = sll_create(sll_cmp_int, sll_print_node_int, sll_free_data,
-                               (void *)&a);
-
-      ll = sll_add(ll, (void *)(&a));
-      ll = sll_add(ll, (void *)(&b));
-      ll = sll_add(ll, (void *)(&c));
-      ll = sll_add(ll, (void *)(&d));
-      printf("updating %d\n", a);
-
-      ll = sll_update(ll, (void *)(&a), (void *)(&e));
-      sll_list(ll);
-      assert(sll_list_len(ll) == 5 && "list length unexpected");
-      sll_assert_each_int(ll, (int[]){d, c, b, e, a});
-
-      ll = sll_update(ll, (void *)(&c), (void *)(&f));
-      sll_list(ll);
-      assert(sll_list_len(ll) == 5 && "list length unexpected");
-      sll_assert_each_int(ll, (int[]){d, f, b, e, a});
-
-      sll_nodes_free(ll);
-
-      printf("-- %s: ok\n", cse);
-    }
-  }
-
-  {
-    char *cse = "sll_string_data";
-    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
-      printf("---- %s\n", cse);
-
-      SLLNode *ll = sll_create(sll_cmp_str, sll_print_node_str, sll_free_data,
-                               (void *)s1);
-      printf("head: %p\n", ll);
-      sll_print_node_str(ll);
-
-      ll = sll_add(ll, (void *)s1_1);
-      ll = sll_add(ll, (void *)s2);
-      sll_list(ll);
-
-      assert(sll_list_len(ll) == 3 && "list length unexpected");
-      sll_assert_each_str(ll, (char *[]){s2, s1_1, s1});
-
-      sll_nodes_free(ll);
-
-      printf("-- %s: ok\n", cse);
-    }
-  }
-
-  {
-    char *cse = "sll_find_diff_ptr";
-    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
-      printf("---- %s\n", cse);
-      SLLNode *ll = sll_create(sll_cmp_int, sll_print_node_int, sll_free_data,
-                               (void *)&a);
-
-      int aa = a;
-      sll_list(ll);
-
-      SLLNode *n = sll_find(ll, (void *)(&aa));
-      assert(n && "unexpected NULL");
-      printf("found node: ");
-      sll_print_node_int(n);
-      sll_assert_next_int(n, a);
-
-      sll_nodes_free(ll);
+      if (expected_int != NULL && expected_int->ds != NULL) {
+        free(expected_int->ds);
+      }
+      if (expected_int != NULL) {
+        free(expected_int);
+      }
+      ll = sll_nodes_free(ll);
 
       printf("-- %s: ok\n", cse);
     }
@@ -383,30 +252,272 @@ void ds_singly_linked_list(int argc, char **argv) {
     if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
       printf("---- %s\n", cse);
 
-      int a_cpy = a;
-      int b_cpy = b;
-      int c_cpy = c;
-      int d_cpy = d;
-      int e_cpy = e;
+      size_t expected_int_size = 10;
+      DatasInt *expected_int = malloc(1 * sizeof(DatasInt));
+      expected_int->ds = calloc(expected_int_size, sizeof(int));
+      expected_int->size = expected_int_size;
+      for (int i = 0; i < expected_int->size; ++i) {
+        expected_int->ds[i] = i;
+      }
 
-      SLLNode *ll = sll_create(sll_cmp_int, sll_print_node_int, sll_free_data,
-                               (void *)&a_cpy);
-
-      ll = sll_add(ll, (void *)(&b_cpy));
-      ll = sll_add(ll, (void *)(&c_cpy));
-      ll = sll_add(ll, (void *)(&d_cpy));
-      ll = sll_add(ll, (void *)(&e_cpy));
+      SLLNode *ll = sll_create(sll_cmp_int, (void *)&expected_int->ds[0]);
+      for (int i = 1; i < expected_int->size; ++i) {
+        SLLNode *tmp = sll_add(ll, (void *)&expected_int->ds[i]);
+        assert(tmp != ll && "unexpected eqaulity of ptrs");
+        ll = tmp;
+      }
 
       int inc_coef = 5;
-      sll_apply(ll, sll_apply_print_node_int,
-                (void *)"apply -- node ptr '%p'\n");
+      DatasInt *expected_int_assert = malloc(1 * sizeof(DatasInt));
+      expected_int_assert->ds = calloc(expected_int_size, sizeof(int));
+      expected_int_assert->size = expected_int_size;
+      for (int i = 0; i < expected_int_assert->size; ++i) {
+        expected_int_assert->ds[i] = i + inc_coef;
+      }
+
+      sll_apply(ll, sll_apply_print_node_int, (void *)"node ptr -- %p\n");
+
+      printf("before incrementing\n");
+      sll_list(ll, sll_print_node_int, NULL);
       sll_apply(ll, sll_apply_inc_int, (void *)&inc_coef);
+      sll_apply(ll, sll_assert_node_int_reverse, expected_int_assert);
+      printf("after incrementing\n");
+      sll_list(ll, sll_print_node_int, NULL);
 
-      assert(sll_list_len(ll) == 5 && "list length unexpected");
-      sll_assert_each_int(ll, (int[]){e + inc_coef, d + inc_coef, c + inc_coef,
-                                      b + inc_coef, a + inc_coef});
+      if (expected_int != NULL && expected_int->ds != NULL) {
+        free(expected_int->ds);
+      }
+      if (expected_int != NULL) {
+        free(expected_int);
+      }
+      if (expected_int_assert != NULL && expected_int_assert->ds != NULL) {
+        free(expected_int_assert->ds);
+      }
+      if (expected_int_assert != NULL) {
+        free(expected_int_assert);
+      }
+      ll = sll_nodes_free(ll);
 
-      sll_nodes_free(ll);
+      printf("-- %s: ok\n", cse);
+    }
+  }
+
+  {
+    char *cse = "sll_append";
+    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
+      printf("---- %s\n", cse);
+
+      size_t expected_int_size = 10;
+      DatasInt *expected_int = malloc(1 * sizeof(DatasInt));
+      expected_int->ds = calloc(expected_int_size, sizeof(int));
+      expected_int->size = expected_int_size;
+      for (int i = 0; i < expected_int->size; ++i) {
+        expected_int->ds[i] = i;
+      }
+
+      SLLNode *ll = sll_create(sll_cmp_int, (void *)&expected_int->ds[0]);
+
+      // validation
+      SLLNode *val_node = sll_append(NULL, (void *)&expected_int->ds[0]);
+      assert(val_node == NULL && "unexpected non-NULL");
+      val_node = sll_append(NULL, NULL);
+      assert(val_node == NULL && "unexpected non-NULL");
+      val_node = sll_append(ll, NULL);
+      assert(val_node == ll && "unexpected linked list ptr mismatch");
+      assert(sll_list_len(ll) == 1 && "unexpected length mismatch");
+
+      // functionality
+      for (int i = 1; i < expected_int->size; ++i) {
+        SLLNode *tmp = sll_append(ll, (void *)&expected_int->ds[i]);
+        assert(tmp == ll && "unexpected eqaulity of ptrs");
+      }
+      sll_list(ll, sll_print_node_int, NULL);
+      assert(sll_list_len(ll) == expected_int->size &&
+             "unexpected length mismatch");
+      sll_apply(ll, sll_assert_node_int, expected_int);
+
+      if (expected_int != NULL && expected_int->ds != NULL) {
+        free(expected_int->ds);
+      }
+      if (expected_int != NULL) {
+        free(expected_int);
+      }
+      ll = sll_nodes_free(ll);
+
+      printf("-- %s: ok\n", cse);
+    }
+  }
+
+  {
+    char *cse = "sll_find";
+    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
+      printf("---- %s\n", cse);
+
+      size_t expected_int_size = 10;
+      DatasInt *expected_int = malloc(1 * sizeof(DatasInt));
+      expected_int->ds = calloc(expected_int_size, sizeof(int));
+      expected_int->size = expected_int_size;
+      for (int i = 0; i < expected_int->size; ++i) {
+        expected_int->ds[i] = i;
+      }
+
+      SLLNode *ll = sll_create(sll_cmp_int, (void *)&expected_int->ds[0]);
+
+      // validation
+      SLLNode *val_node = sll_find(NULL, (void *)&expected_int->ds[0]);
+      assert(val_node == NULL && "unexpected non-NULL");
+      val_node = sll_find(NULL, NULL);
+      assert(val_node == NULL && "unexpected non-NULL");
+      val_node = sll_find(ll, NULL);
+      assert(val_node == NULL && "unexpected non-NULL");
+      assert(sll_list_len(ll) == 1 && "unexpected length mismatch");
+
+      // data prep
+      for (int i = 1; i < expected_int->size; ++i) {
+        SLLNode *tmp = sll_add(ll, (void *)&expected_int->ds[i]);
+        assert(tmp != ll && "unexpected eqaulity of ptrs");
+        ll = tmp;
+      }
+
+      // functionality
+      for (int i = 0; i < expected_int->size; ++i) {
+        SLLNode *n = sll_find(ll, (void *)&expected_int->ds[i]);
+        assert(n != NULL && "unexpected NULL");
+        printf("searched for '%d', found '%d'\n", expected_int->ds[i],
+               *(int *)n->data);
+        assert(*(int *)n->data == expected_int->ds[i] && "data mismatch");
+      }
+
+      if (expected_int != NULL && expected_int->ds != NULL) {
+        free(expected_int->ds);
+      }
+      if (expected_int != NULL) {
+        free(expected_int);
+      }
+      ll = sll_nodes_free(ll);
+
+      printf("-- %s: ok\n", cse);
+    }
+  }
+
+  {
+    char *cse = "sll_update";
+    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
+      printf("---- %s\n", cse);
+
+      size_t expected_int_size = 10;
+      DatasInt *expected_int = malloc(1 * sizeof(DatasInt));
+      expected_int->ds = calloc(expected_int_size, sizeof(int));
+      expected_int->size = expected_int_size;
+      for (int i = 0; i < expected_int->size; ++i) {
+        expected_int->ds[i] = i;
+      }
+
+      SLLNode *ll = sll_create(sll_cmp_int, (void *)&expected_int->ds[0]);
+
+      // validation
+      SLLNode *val_node = sll_update(NULL, (void *)&expected_int->ds[0],
+                                     (void *)&expected_int->ds[1]);
+      assert(val_node == NULL && "unexpected non-NULL");
+      val_node = sll_update(NULL, NULL, NULL);
+      assert(val_node == NULL && "unexpected non-NULL");
+      val_node = sll_update(ll, NULL, (void *)&expected_int->ds[0]);
+      assert(val_node == ll && "list ptrs differ");
+      val_node = sll_update(ll, (void *)&expected_int->ds[0], NULL);
+      assert(val_node == ll && "list ptrs differ");
+      assert(sll_list_len(ll) == 1 && "unexpected length mismatch");
+
+      // data prep
+      for (int i = 1; i < expected_int->size; ++i) {
+        SLLNode *tmp = sll_add(ll, (void *)&expected_int->ds[i]);
+        assert(tmp != ll && "unexpected eqaulity of ptrs");
+        ll = tmp;
+      }
+      printf("before update\n");
+      sll_list(ll, sll_print_node_int, NULL);
+
+      // functionality - reverse list by updating
+      for (int i = 0; i < expected_int->size; ++i) {
+        ll = sll_update(ll, (void *)&expected_int->ds[i],
+                        (void *)&expected_int->ds[expected_int->size - 1 - i]);
+        assert(ll != NULL && "unexpected NULL");
+      }
+      printf("after update\n");
+      sll_list(ll, sll_print_node_int, NULL);
+      assert(sll_list_len(ll) == expected_int->size &&
+             "unexpected length mismatch");
+      sll_apply(
+          ll, sll_assert_node_int,
+          expected_int); // NOTE: use sll_assert_node_int instead of _reverse,
+                         // because we modified data in underlying mem addresses
+                         // i.e. data in expected_int and linked list has the
+                         // same orientation
+
+      if (expected_int != NULL && expected_int->ds != NULL) {
+        free(expected_int->ds);
+      }
+      if (expected_int != NULL) {
+        free(expected_int);
+      }
+      ll = sll_nodes_free(ll);
+
+      printf("-- %s: ok\n", cse);
+    }
+  }
+
+  {
+    char *cse = "sll_delete";
+    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
+      printf("---- %s\n", cse);
+
+      size_t expected_int_size = 10;
+      DatasInt *expected_int = malloc(1 * sizeof(DatasInt));
+      expected_int->ds = calloc(expected_int_size, sizeof(int));
+      expected_int->size = expected_int_size;
+      for (int i = 0; i < expected_int->size; ++i) {
+        expected_int->ds[i] = i;
+      }
+
+      SLLNode *ll = sll_create(sll_cmp_int, (void *)&expected_int->ds[0]);
+
+      // validation
+      SLLNode *val_node = sll_delete(NULL, (void *)&expected_int->ds[0]);
+      assert(val_node == NULL && "unexpected non-NULL");
+      val_node = sll_delete(NULL, NULL);
+      assert(val_node == NULL && "unexpected non-NULL");
+      val_node = sll_delete(ll, NULL);
+      assert(val_node == ll && "list ptrs differ");
+      assert(sll_list_len(ll) == 1 && "unexpected length mismatch");
+
+      // data prep
+      for (int i = 1; i < expected_int->size; ++i) {
+        SLLNode *tmp = sll_add(ll, (void *)&expected_int->ds[i]);
+        assert(tmp != ll && "unexpected eqaulity of ptrs");
+        ll = tmp;
+      }
+
+      // functionality
+      size_t orig_ll_len = sll_list_len(ll);
+      for (int i = 0, iters_count = 0; iters_count < expected_int->size;
+           i = (i + 3) % expected_int->size, ++iters_count) {
+        printf("list before deleting '%d'\n", expected_int->ds[i]);
+        sll_list(ll, sll_print_node_int, NULL);
+        ll = sll_delete(ll, (void *)&expected_int->ds[i]);
+        assert(sll_list_len(ll) == orig_ll_len - iters_count - 1 &&
+               "unexpected list length");
+        SLLNode *n = sll_find(ll, (void *)&expected_int->ds[i]);
+        assert(n == NULL && "expected not found, but data was found");
+        printf("list after deleting '%d'\n", expected_int->ds[i]);
+        sll_list(ll, sll_print_node_int, NULL);
+      }
+
+      if (expected_int != NULL && expected_int->ds != NULL) {
+        free(expected_int->ds);
+      }
+      if (expected_int != NULL) {
+        free(expected_int);
+      }
+      ll = sll_nodes_free(ll);
 
       printf("-- %s: ok\n", cse);
     }

@@ -10,14 +10,15 @@
 
 typedef struct SLLNode {
   bool (*cmp)(void *, void *);
-  void (*print)(struct SLLNode *node);
-  void (*free_data)(void *); // frees memory
   struct SLLNode *next;
-  void *data;
+  void *data; // NOTE: freeing data is not handled; please handle it yourself
 } SLLNode;
 
+// sll_apply executes func fn to each list elements with given argument
+void sll_apply(SLLNode *cursor, void (*fn)(SLLNode *, void *), void *arg);
+
 // sll_list prints the full linked list
-void sll_list(SLLNode *cursor);
+void sll_list(SLLNode *cursor, void (*print)(SLLNode *, void *), void *fmt);
 
 // sll_list_len finds the linked_list length
 size_t sll_list_len(SLLNode *cursor);
@@ -28,26 +29,25 @@ SLLNode *sll_node_free(SLLNode *cursor);
 
 // sll_free_nodes frees the entire linked list
 // frees memory
-void sll_nodes_free(SLLNode *cursor);
-
-// sll_apply executes func fn to each list elements with given argument
-void sll_apply(SLLNode *cursor, void (*fn)(SLLNode *, void *), void *arg);
+void *sll_nodes_free(SLLNode *cursor);
 
 // sll_create prepares a new node with all the helper functions
 // returns NULL if at least one argument is not properly provided
 // allocs memory
-SLLNode *sll_create(bool (*cmp)(void *, void *), void (*print)(SLLNode *node),
-                    void (*free_data)(void *data), void *data);
+SLLNode *sll_create(bool (*cmp)(void *, void *), void *data);
+
+// sll_add creates a new node at the beginning of the linked list and returns
+// that node
+// returns NULL if cursor is NULL
+// allows duplicates
+// allocs memory
+SLLNode *sll_add(SLLNode *cursor, void *data);
 
 // sll_append creates a new node at the end of the linked list
 // returns NULL if cursor is NULL
 // allows duplicates
 // allocs memory
 SLLNode *sll_append(SLLNode *cursor, void *data);
-
-// sll_add creates a new node at the beginning of the linked list and returns
-// that node returns NULL if cursor is NULL allows duplicates allocs memory
-SLLNode *sll_add(SLLNode *cursor, void *data);
 
 // sll_find searches linked list for provided data and returns the first found
 // instance
@@ -74,69 +74,76 @@ SLLNode *sll_delete(SLLNode *cursor, void *data);
 
 #include <stdlib.h>
 
-void sll_list(SLLNode *cursor) {
-  for (; cursor != NULL; cursor = cursor->next) {
-    printf("-> ");
-    cursor->print(cursor);
-  }
-  printf("-> %p\n", cursor);
-  return;
-}
-
-size_t sll_list_len(SLLNode *cursor) {
-  for (size_t i = 0; cursor != NULL; ++i, cursor = cursor->next) {
-    if (!cursor->next) {
-      return i + 1;
-    }
-  }
-  return 0;
-}
-
-SLLNode *sll_node_free(SLLNode *cursor) {
-  if (!cursor) {
-    return NULL;
-  }
-  // comment in for logging: printf("freeing (%p)\n", cursor);
-  SLLNode *me = cursor;
-  cursor = cursor->next;
-  me->free_data(me->data);
-  free(me);
-  return cursor;
-}
-
-void sll_nodes_free(SLLNode *cursor) {
-  for (; cursor != NULL;) {
-    cursor = sll_node_free(cursor);
-  }
-  return;
-}
-
 void sll_apply(SLLNode *cursor, void (*fn)(SLLNode *, void *), void *arg) {
   for (; cursor != NULL; cursor = cursor->next) {
     (*fn)(cursor, arg);
   }
 }
 
-SLLNode *sll_create(bool (*cmp)(void *, void *), void (*print)(SLLNode *node),
-                    void (*free_data)(void *data), void *data) {
-  if (!cmp || !print || !free_data || !data) {
+void sll_list(SLLNode *cursor, void (*print)(SLLNode *, void *), void *fmt) {
+  sll_apply(cursor, print, fmt);
+  return;
+}
+
+void sll_list_count(SLLNode *cursor, void *count) {
+  ++(*(int *)count);
+  return;
+}
+
+size_t sll_list_len(SLLNode *cursor) {
+  int count = 0;
+  sll_apply(cursor, sll_list_count, (void *)&count);
+  return count;
+}
+
+SLLNode *sll_node_free(SLLNode *cursor) {
+  if (cursor == NULL) {
+    return NULL;
+  }
+  SLLNode *me = cursor;
+  cursor = cursor->next;
+  free(me);
+  return cursor;
+}
+
+void *sll_nodes_free(SLLNode *cursor) {
+  for (; cursor != NULL;) {
+    cursor = sll_node_free(cursor);
+  }
+  return NULL;
+}
+
+SLLNode *sll_create(bool (*cmp)(void *, void *), void *data) {
+  if (cmp == NULL || data == NULL) {
     return NULL;
   }
   SLLNode *new = calloc(1, sizeof(SLLNode));
   new->cmp = cmp;
-  new->print = print;
-  new->free_data = free_data;
   new->data = data;
   new->next = NULL;
   return new;
 }
 
-SLLNode *sll_append(SLLNode *cursor, void *data) {
-  if (!cursor) {
+SLLNode *sll_add(SLLNode *cursor, void *data) {
+  if (cursor == NULL) {
     return NULL;
   }
-  SLLNode *new =
-      sll_create(cursor->cmp, cursor->print, cursor->free_data, data);
+  if (data == NULL) {
+    return cursor;
+  }
+  SLLNode *new = sll_create(cursor->cmp, data);
+  new->next = cursor;
+  return new;
+}
+
+SLLNode *sll_append(SLLNode *cursor, void *data) {
+  if (cursor == NULL) {
+    return NULL;
+  }
+  if (data == NULL) {
+    return cursor;
+  }
+  SLLNode *new = sll_create(cursor->cmp, data);
 
   SLLNode *cur = cursor;
   for (; cur->next != NULL; cur = cur->next) {
@@ -146,19 +153,10 @@ SLLNode *sll_append(SLLNode *cursor, void *data) {
   return cursor;
 }
 
-SLLNode *sll_add(SLLNode *cursor, void *data) {
-  if (!cursor) {
+SLLNode *sll_find(SLLNode *cursor, void *data) {
+  if (data == NULL) {
     return NULL;
   }
-  SLLNode *new =
-      sll_create(cursor->cmp, cursor->print, cursor->free_data, data);
-
-  new->next = cursor;
-
-  return new;
-}
-
-SLLNode *sll_find(SLLNode *cursor, void *data) {
   for (; cursor != NULL; cursor = cursor->next) {
     if (cursor->cmp(cursor->data, data)) {
       return cursor;
@@ -168,21 +166,29 @@ SLLNode *sll_find(SLLNode *cursor, void *data) {
 }
 
 SLLNode *sll_update(SLLNode *cursor, void *old_data, void *new_data) {
-  if (!cursor) {
+  if (cursor == NULL) {
     return NULL;
+  }
+  if (old_data == NULL) {
+    return cursor;
+  }
+  if (new_data == NULL) {
+    return cursor;
   }
   SLLNode *cur = cursor;
   for (; cur != NULL && !cur->cmp(cur->data, old_data); cur = cur->next) {
     ;
   }
-  cur->free_data(cur->data);
   cur->data = new_data;
   return cursor;
 }
 
 SLLNode *sll_delete(SLLNode *cursor, void *data) {
-  if (!cursor) {
+  if (cursor == NULL) {
     return NULL;
+  }
+  if (data == NULL) {
+    return cursor;
   }
   SLLNode *cur = cursor;
   SLLNode *prev = NULL;
