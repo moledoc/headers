@@ -36,15 +36,18 @@ void *sll_nodes_free(SLLNode *cursor);
 // allocs memory
 SLLNode *sll_create(bool (*cmp)(void *, void *), void *data);
 
+// sll_add creates a new node at the beginning of the linked list and returns
+// that node
+// returns NULL if cursor is NULL
+// allows duplicates
+// allocs memory
+SLLNode *sll_add(SLLNode *cursor, void *data);
+
 // sll_append creates a new node at the end of the linked list
 // returns NULL if cursor is NULL
 // allows duplicates
 // allocs memory
 SLLNode *sll_append(SLLNode *cursor, void *data);
-
-// sll_add creates a new node at the beginning of the linked list and returns
-// that node returns NULL if cursor is NULL allows duplicates allocs memory
-SLLNode *sll_add(SLLNode *cursor, void *data);
 
 // sll_find searches linked list for provided data and returns the first found
 // instance
@@ -82,7 +85,10 @@ void sll_list(SLLNode *cursor, void (*print)(SLLNode *, void *), void *fmt) {
   return;
 }
 
-void sll_list_count(SLLNode *cursor, void *count) { (*(int *)count)++; }
+void sll_list_count(SLLNode *cursor, void *count) {
+  ++(*(int *)count);
+  return;
+}
 
 size_t sll_list_len(SLLNode *cursor) {
   int count = 0;
@@ -118,6 +124,18 @@ SLLNode *sll_create(bool (*cmp)(void *, void *), void *data) {
   return new;
 }
 
+SLLNode *sll_add(SLLNode *cursor, void *data) {
+  if (cursor == NULL) {
+    return NULL;
+  }
+  if (data == NULL) {
+    return cursor;
+  }
+  SLLNode *new = sll_create(cursor->cmp, data);
+  new->next = cursor;
+  return new;
+}
+
 SLLNode *sll_append(SLLNode *cursor, void *data) {
   if (cursor == NULL) {
     return NULL;
@@ -133,18 +151,6 @@ SLLNode *sll_append(SLLNode *cursor, void *data) {
   }
   cur->next = new;
   return cursor;
-}
-
-SLLNode *sll_add(SLLNode *cursor, void *data) {
-  if (cursor == NULL) {
-    return NULL;
-  }
-  if (data == NULL) {
-    return cursor;
-  }
-  SLLNode *new = sll_create(cursor->cmp, data);
-  new->next = cursor;
-  return new;
 }
 
 SLLNode *sll_find(SLLNode *cursor, void *data) {
