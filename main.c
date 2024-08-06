@@ -345,6 +345,71 @@ void ds_singly_linked_list(int argc, char **argv) {
     }
   }
 
+  {
+    char *cse = "sll_update";
+    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
+      printf("---- %s\n", cse);
+
+      size_t expected_int_size = 10;
+      DatasInt *expected_int = malloc(1 * sizeof(DatasInt));
+      expected_int->ds = calloc(expected_int_size, sizeof(int));
+      expected_int->size = expected_int_size;
+      for (int i = 0; i < expected_int->size; ++i) {
+        expected_int->ds[i] = i;
+      }
+
+      SLLNode *ll = sll_create(sll_cmp_int, (void *)&expected_int->ds[0]);
+
+      // validation
+      SLLNode *val_node = sll_update(NULL, (void *)&expected_int->ds[0],
+                                     (void *)&expected_int->ds[1]);
+      assert(val_node == NULL && "unexpected non-NULL");
+      val_node = sll_update(NULL, NULL, NULL);
+      assert(val_node == NULL && "unexpected non-NULL");
+      val_node = sll_update(ll, NULL, (void *)&expected_int->ds[0]);
+      assert(val_node == NULL && "unexpected non-NULL");
+      val_node = sll_update(ll, (void *)&expected_int->ds[0], NULL);
+      assert(val_node == NULL && "unexpected non-NULL");
+      assert(sll_list_len(ll) == 1 && "unexpected length mismatch");
+
+      // data prep
+      for (int i = 1; i < expected_int->size; ++i) {
+        SLLNode *tmp = sll_add(ll, (void *)&expected_int->ds[i]);
+        assert(tmp != ll && "unexpected eqaulity of ptrs");
+        ll = tmp;
+      }
+      printf("before update\n");
+      sll_list(ll, sll_print_node_int, NULL);
+
+      // functionality - reverse list by updating
+      for (int i = 0; i < expected_int->size; ++i) {
+        ll = sll_update(ll, (void *)&expected_int->ds[i],
+                        (void *)&expected_int->ds[expected_int->size - 1 - i]);
+        assert(ll != NULL && "unexpected NULL");
+      }
+      printf("after update\n");
+      sll_list(ll, sll_print_node_int, NULL);
+      assert(sll_list_len(ll) == expected_int->size &&
+             "unexpected length mismatch");
+      sll_apply(
+          ll, sll_assert_node_int,
+          expected_int); // NOTE: use sll_assert_node_int instead of _reverse,
+                         // because we modified data in underlying mem addresses
+                         // i.e. data in expected_int and linked list has the
+                         // same orientation
+
+      if (expected_int != NULL && expected_int->ds != NULL) {
+        free(expected_int->ds);
+      }
+      if (expected_int != NULL) {
+        free(expected_int);
+      }
+      ll = sll_nodes_free(ll);
+
+      printf("-- %s: ok\n", cse);
+    }
+  }
+
   return;
 }
 
