@@ -20,16 +20,19 @@ bool sll_cmp_str(void *a, void *b) { return strcmp((char *)a, (char *)b) == 0; }
 
 void sll_print_node_int(SLLNode *node, void *_) {
   printf("-> (%p) data:%d\n", node, *(int *)(node->data));
+  return;
 }
 
 void sll_print_node_str(SLLNode *node, void *_) {
   printf("-> (%p) data:'%s'\n", node, (char *)(node->data));
+  return;
 }
 
 void sll_free_data(SLLNode *node, void *_) {
   if (node != NULL && node->data != NULL) {
     free(node->data);
   }
+  return;
 }
 
 typedef struct {
@@ -44,6 +47,18 @@ void sll_assert_node_int(SLLNode *node, void *datas) {
   int *ds = ((DatasInt *)datas)->ds;
   assert(*(int *)node->data == *ds && "data mismatch");
   memmove(((DatasInt *)datas)->ds, ds + 1, ((DatasInt *)datas)->size - 1);
+  --((DatasInt *)datas)->size;
+  return;
+}
+
+void sll_assert_node_int_reverse(SLLNode *node, void *datas) {
+  if (((DatasInt *)datas)->size == 0) {
+    return;
+  }
+  int *ds = ((DatasInt *)datas)->ds;
+  assert(*(int *)node->data == (ds[((DatasInt *)datas)->size - 1]) &&
+         "data mismatch");
+  memmove(((DatasInt *)datas)->ds, ds, ((DatasInt *)datas)->size - 1);
   --((DatasInt *)datas)->size;
   return;
 }
@@ -178,9 +193,41 @@ void ds_singly_linked_list(int argc, char **argv) {
       printf("-- %s: ok\n", cse);
     }
   }
-}
 
-void sll_free_data(void *data) { ; }
+  {
+    char *cse = "sll_add";
+    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
+      printf("---- %s\n", cse);
+
+      size_t expected_int_size = 10;
+      DatasInt *expected_int = malloc(1 * sizeof(DatasInt));
+      expected_int->ds = calloc(expected_int_size, sizeof(int));
+      expected_int->size = expected_int_size;
+      for (int i = 0; i < expected_int->size; ++i) {
+        expected_int->ds[i] = i;
+      }
+
+      SLLNode *ll = sll_create(sll_cmp_int, (void *)&expected_int->ds[0]);
+      for (int i = 1; i < expected_int->size; ++i) {
+        SLLNode *tmp = sll_add(ll, (void *)&expected_int->ds[i]);
+        assert(tmp != ll && "unexpected eqaulity of ptrs");
+        ll = tmp;
+      }
+      sll_list(ll, sll_print_node_int, NULL);
+      sll_apply(ll, sll_assert_node_int_reverse, expected_int);
+
+      if (expected_int != NULL && expected_int->ds != NULL) {
+        free(expected_int->ds);
+      }
+      if (expected_int != NULL) {
+        free(expected_int);
+      }
+      ll = sll_nodes_free(ll);
+
+      printf("-- %s: ok\n", cse);
+    }
+  }
+}
 
 void sll_free_alloced_str(SLLNode *cursor, void *_) {
   if (cursor != NULL && cursor->data != NULL) {
