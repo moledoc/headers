@@ -34,6 +34,7 @@ void *sll_nodes_free(SLLNode *cursor);
 // sll_create prepares a new node with all the helper functions
 // returns NULL if at least one argument is not properly provided
 // allocs memory
+// returns NULL if [cm]alloc fails
 SLLNode *sll_create(bool (*cmp)(void *, void *), void *data);
 
 // sll_add creates a new node at the beginning of the linked list and returns
@@ -41,12 +42,14 @@ SLLNode *sll_create(bool (*cmp)(void *, void *), void *data);
 // returns NULL if cursor is NULL
 // allows duplicates
 // allocs memory
+// if allocating memory fails, data is not added and errno is set (to ENOMEM)
 SLLNode *sll_add(SLLNode *cursor, void *data);
 
 // sll_append creates a new node at the end of the linked list
 // returns NULL if cursor is NULL
 // allows duplicates
 // allocs memory
+// if allocating memory fails, data is not added and errno is set (to ENOMEM)
 SLLNode *sll_append(SLLNode *cursor, void *data);
 
 // sll_find searches linked list for provided data and returns the first found
@@ -118,6 +121,9 @@ SLLNode *sll_create(bool (*cmp)(void *, void *), void *data) {
     return NULL;
   }
   SLLNode *new = calloc(1, sizeof(SLLNode));
+  if (new == NULL) { // NOTE: calloc failed, return gracefully
+    return NULL;
+  }
   new->cmp = cmp;
   new->data = data;
   new->next = NULL;
@@ -132,6 +138,9 @@ SLLNode *sll_add(SLLNode *cursor, void *data) {
     return cursor;
   }
   SLLNode *new = sll_create(cursor->cmp, data);
+  if (new == NULL) { // NOTE: alloc failed, check errno (ENOMEM)
+    return cursor;
+  }
   new->next = cursor;
   return new;
 }
@@ -144,6 +153,9 @@ SLLNode *sll_append(SLLNode *cursor, void *data) {
     return cursor;
   }
   SLLNode *new = sll_create(cursor->cmp, data);
+  if (new == NULL) { // NOTE: alloc failed, check errno (ENOMEM)
+    return cursor;
+  }
 
   SLLNode *cur = cursor;
   for (; cur->next != NULL; cur = cur->next) {
