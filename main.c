@@ -1332,19 +1332,6 @@ typedef struct {
   size_t size;
 } DatasInt;
 
-void stack_assert_node_int(StackNode *node, void *datas) {
-  size_t nodes_count = stack_list_len(node);
-  if (nodes_count == 0) {
-    return;
-  }
-  int *ds = ((DatasInt *)datas)->ds;
-  size_t ds_size = ((DatasInt *)datas)->size;
-  size_t offset = ds_size - nodes_count;
-  assert(*(int *)node->data == ds[ds_size - nodes_count] && "data mismatch");
-  // NOTE: can't use memmove, as it moves data between mem addresses
-  return;
-}
-
 void stack_assert_node_int_reverse(StackNode *node, void *datas) {
   if (((DatasInt *)datas)->size == 0) {
     return;
@@ -1422,9 +1409,9 @@ void ds_stack(int argc, char **argv) {
       assert(errno == 0 && "memory alloc failed");
       expected_int->ds = (int[]){a};
       expected_int->size = 1; // TODO: non-hardcoded size
-      stack_apply(stack, stack_assert_node_int, expected_int);
+      stack_apply(stack, stack_assert_node_int_reverse, expected_int);
       free(expected_int);
-      stack_nodes_free(stack);
+      stack = stack_nodes_free(stack);
 
       // functionality int alloced
       int *a_alloced = malloc(1 * sizeof(int));
@@ -1438,7 +1425,7 @@ void ds_stack(int argc, char **argv) {
       assert(errno == 0 && "memory alloc failed");
       expected_int->ds = (int[]){a};
       expected_int->size = 1; // TODO: non-hardcoded size
-      stack_apply(stack, stack_assert_node_int, expected_int);
+      stack_apply(stack, stack_assert_node_int_reverse, expected_int);
 
       free(expected_int);
       stack_apply(stack, stack_free_data, NULL);
@@ -1599,57 +1586,6 @@ void ds_stack(int argc, char **argv) {
     }
   }
 
-  /*
-    {
-      char *cse = "queue_push";
-      if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0)
-    { printf("---- %s\n", cse);
-
-        size_t expected_int_size = 10;
-        DatasInt *expected_int = malloc(1 * sizeof(DatasInt));
-        assert(errno == 0 && "memory alloc failed");
-        expected_int->ds = calloc(expected_int_size, sizeof(int));
-        assert(errno == 0 && "memory alloc failed");
-        expected_int->size = expected_int_size;
-        for (int i = 0; i < expected_int->size; ++i) {
-          expected_int->ds[i] = i;
-        }
-
-        QueueNode *ll = queue_create((void *)(expected_int->ds + 0));
-
-        // validation
-        StackNode *val_node = queue_push(NULL, (void *)&expected_int->ds[0]);
-        assert(val_node == NULL && "unexpected non-NULL");
-        val_node = queue_push(NULL, NULL);
-        assert(val_node == NULL && "unexpected non-NULL");
-        val_node = queue_push(ll, NULL);
-        assert(val_node == ll && "unexpected linked list ptr mismatch");
-        assert(queue_list_len(ll) == 1 && "unexpected length mismatch");
-
-        // functionality
-        for (int i = 1; i < expected_int->size; ++i) {
-          StackNode *tmp = queue_push(ll, (void *)&expected_int->ds[i]);
-          assert(errno == 0 && "memory alloc failed");
-          assert(tmp == ll && "unexpected eqaulity of ptrs");
-        }
-        queue_list(ll, queue_print_node_int, NULL);
-        assert(queue_list_len(ll) == expected_int->size &&
-               "unexpected length mismatch");
-        queue_apply(ll, queue_assert_node_int, expected_int);
-
-        if (expected_int != NULL && expected_int->ds != NULL) {
-          free(expected_int->ds);
-        }
-        if (expected_int != NULL) {
-          free(expected_int);
-        }
-        ll = queue_nodes_free(ll);
-
-        printf("-- %s: ok\n", cse);
-      }
-    }
-  */
-
   {
     char *cse = "stack_pop";
     if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
@@ -1689,7 +1625,8 @@ void ds_stack(int argc, char **argv) {
       // functionality
       size_t orig_stack_len = stack_list_len(stack);
       for (int i = 0; i < expected_int->size; ++i) {
-        printf("stack before popping\n");
+        printf("stack before popping'%d'\n",
+               expected_int->ds[expected_int->size - 1 - i]);
         stack_list(stack, stack_print_node_int, NULL);
         StackNode *tmp = stack_pop(stack, &out);
         assert(tmp != stack && "unexpected ptr equality");
@@ -1697,7 +1634,8 @@ void ds_stack(int argc, char **argv) {
         assert(*(int *)out == expected_int->ds[expected_int->size - 1 - i]);
         assert(stack_list_len(stack) == orig_stack_len - 1 - i &&
                "unexpected stack len");
-        printf("stack after popping\n");
+        printf("stack after popping'%d'\n",
+               expected_int->ds[expected_int->size - 1 - i]);
         stack_list(stack, stack_print_node_int, NULL);
       }
 
@@ -1732,44 +1670,70 @@ void ds_stack(int argc, char **argv) {
 
 #include "list.h"
 
-void queue_print_node_int(QueueNode *node) {
+void queue_print_node_int(QueueNode *node, void *_) {
   printf("(%p) data:%d\n", node, *(int *)(node->data));
-  ; // force uncompressed formatting (ccls)
 }
 
-void queue_print_node_str(QueueNode *node) {
+void queue_print_node_str(QueueNode *node, void *_) {
   printf("(%p) data:'%s'\n", node, (char *)(node->data));
-  ; // force uncompressed formatting (ccls)
 }
 
-void queue_apply_print_node_int(QueueNode *node, void *fmt) {
-  printf(fmt, node);
+void queue_free_data(QueueNode *node, void *_) {
+  if (node != NULL && node->data != NULL) {
+    free(node->data);
+  }
   return;
 }
 
-void queue_apply_inc_int(QueueNode *node, void *d) {
-  if (!node) {
+typedef struct {
+  int *ds;
+  size_t size;
+} DatasInt;
+
+void queue_assert_node_int(QueueNode *node, void *datas) {
+  size_t nodes_count = queue_list_len(node);
+  if (nodes_count == 0) {
     return;
   }
-  *(int *)node->data += *(int *)d;
+  int *ds = ((DatasInt *)datas)->ds;
+  size_t ds_size = ((DatasInt *)datas)->size;
+  size_t offset = ds_size - nodes_count;
+  assert(*(int *)node->data == ds[ds_size - nodes_count] && "data mismatch");
+  // NOTE: can't use memmove, as it moves data between mem addresses
+  return;
+}
+
+typedef struct {
+  char **ds;
+  size_t size;
+} DatasStr;
+
+void queue_assert_node_str(QueueNode *node, void *datas) {
+  if (((DatasStr *)datas)->size == 0) {
+    return;
+  }
+  char **ds = ((DatasStr *)datas)->ds;
+  assert(strcmp((char *)node->data, *ds) == 0 && "data mismatch");
+  memmove(((DatasStr *)datas)->ds, ds + 1, ((DatasStr *)datas)->size - 1);
+  --((DatasStr *)datas)->size;
+  return;
+}
+
+void queue_apply_print_node_int(QueueNode *cursor, void *fmt) {
+  printf(fmt, cursor);
+  return;
+}
+
+void queue_apply_inc_int(QueueNode *cursor, void *d) {
+  if (!cursor) {
+    return;
+  }
+  *(int *)cursor->data += *(int *)d;
   return;
 }
 
 void ds_queue(int argc, char **argv) {
   char *prog_name = shift(&argc, &argv);
-
-  int a = 1;
-  int aa = a;
-  int b = 2;
-  int c = 3;
-  int d = 4;
-  int e = 5;
-  int f = 6;
-  int g = 7;
-
-  char *s1 = "test";
-  char *s1_1 = "test";
-  char *s2 = "test2";
 
   char *run = "";
   for (; argc > 0;) {
@@ -1784,13 +1748,82 @@ void ds_queue(int argc, char **argv) {
     if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
       printf("---- %s\n", cse);
       QueueNode *queue = NULL;
-      queue = queue_create(NULL, (void *)&a);
-      assert(!queue && "unexpected non-NULL");
-      queue = queue_create(queue_print_node_int, NULL);
-      assert(!queue && "unexpected non-NULL");
-      queue = queue_create(queue_print_node_int, (void *)&a);
-      assert(queue && "unexpected NULL");
-      queue_nodes_free(queue);
+      DatasInt *expected_int = NULL;
+      DatasStr *expected_str = NULL;
+
+      // validation
+      queue = queue_create(NULL);
+      assert(queue == NULL && "unexpected non-NULL");
+
+      // functionality int
+      int a = 1;
+
+      queue = queue_create((void *)&a);
+      queue_list(queue, queue_print_node_int, NULL);
+
+      assert(queue_list_len(queue) == 1 && "unexpected list length");
+      expected_int = malloc(1 * sizeof(DatasInt));
+      assert(errno == 0 && "memory alloc failed");
+      expected_int->ds = (int[]){a};
+      expected_int->size = 1; // TODO: non-hardcoded size
+      queue_apply(queue, queue_assert_node_int, expected_int);
+      free(expected_int);
+      queue = queue_nodes_free(queue);
+
+      // functionality int alloced
+      int *a_alloced = malloc(1 * sizeof(int));
+      assert(errno == 0 && "memory alloc failed");
+      *a_alloced = a;
+      queue = queue_create((void *)a_alloced);
+      queue_list(queue, queue_print_node_int, NULL);
+
+      assert(queue_list_len(queue) == 1 && "unexpected list length");
+      expected_int = malloc(1 * sizeof(DatasInt));
+      assert(errno == 0 && "memory alloc failed");
+      expected_int->ds = (int[]){a};
+      expected_int->size = 1; // TODO: non-hardcoded size
+      queue_apply(queue, queue_assert_node_int, expected_int);
+
+      free(expected_int);
+      queue_apply(queue, queue_free_data, NULL);
+      queue = queue_nodes_free(queue);
+
+      // functionality str
+      char *a_str = "a";
+      queue = queue_create((void *)a_str);
+      queue_list(queue, queue_print_node_str, NULL);
+
+      assert(queue_list_len(queue) == 1 && "unexpected list length");
+      expected_str = malloc(1 * sizeof(DatasInt));
+      assert(errno == 0 && "memory alloc failed");
+      expected_str->ds = (char *[]){a_str};
+      expected_str->size =
+          sizeof(expected_str->ds) / sizeof(expected_str->ds[0]);
+      queue_apply(queue, queue_assert_node_str, expected_str);
+      free(expected_str);
+
+      queue = queue_nodes_free(queue);
+      queue = queue_nodes_free(queue); // duplicate free should work if we use
+                                       // returned queue from queue_nodes_free
+
+      // functionality str alloced
+      char *a_str_alloced = calloc((strlen(a_str) + 1), sizeof(char));
+      assert(errno == 0 && "memory alloc failed");
+      memcpy(a_str_alloced, a_str, strlen(a_str));
+      queue = queue_create((void *)a_str_alloced);
+      queue_list(queue, queue_print_node_str, NULL);
+
+      assert(queue_list_len(queue) == 1 && "unexpected list length");
+      expected_str = malloc(1 * sizeof(DatasStr));
+      assert(errno == 0 && "memory alloc failed");
+      expected_str->ds = (char *[]){a_str};
+      expected_str->size =
+          sizeof(expected_str->ds) / sizeof(expected_str->ds[0]);
+      queue_apply(queue, queue_assert_node_str, expected_str);
+
+      free(expected_str);
+      queue_apply(queue, queue_free_data, NULL);
+      queue = queue_nodes_free(queue);
 
       printf("-- %s: ok\n", cse);
     }
@@ -1801,91 +1834,45 @@ void ds_queue(int argc, char **argv) {
     if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
       printf("---- %s\n", cse);
 
-      QueueNode *queue = NULL;
-      assert(!queue_push(queue, (void *)&a) && "unexpected non-NULL");
-
-      queue = queue_create(queue_print_node_int, (void *)&a);
-      queue_list(queue);
-      queue = queue_push(queue, (void *)&a);
-      queue = queue_push(queue, (void *)&aa);
-      queue = queue_push(queue, (void *)&b);
-      queue = queue_push(queue, (void *)&c);
-      queue = queue_push(queue, (void *)&d);
-      queue_list(queue);
-
-      assert(queue_list_len(queue) == 6 && "unexpected list length");
-      assert(*(int *)queue->data == a);
-      queue_nodes_free(queue);
-
-      printf("-- %s: ok\n", cse);
-    }
-  }
-
-  {
-    char *cse = "queue_pop";
-    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
-      printf("---- %s\n", cse);
-
-      QueueNode *queue = NULL;
-      assert(!queue_push(queue, (void *)&a) && "unexpected non-NULL");
-
-      queue = queue_create(queue_print_node_int, (void *)&a);
-      queue = queue_push(queue, (void *)&a);
-      queue = queue_push(queue, (void *)&aa);
-      queue = queue_push(queue, (void *)&b);
-      queue = queue_push(queue, (void *)&c);
-      queue = queue_push(queue, (void *)&d);
-      queue_list(queue);
-
-      assert(queue_list_len(queue) == 6 && "unexpected list length");
-      size_t orig_len = queue_list_len(queue);
-      int exp_queue[] = (int[]){a, a, aa, b, c, d};
-      for (int i = 0; i < orig_len; ++i) {
-        void *out;
-        queue = queue_pop(queue, &out);
-        assert(queue_list_len(queue) == orig_len - i - 1 &&
-               "unexpected list length");
-        if (queue) {
-          assert(*(int *)queue->data == exp_queue[i + 1]);
-        }
-        assert(*(int *)out == exp_queue[i] && "unexpected value in `out`");
-        printf("popped '%d'\n", *(int *)out);
+      size_t expected_int_size = 10;
+      DatasInt *expected_int = malloc(1 * sizeof(DatasInt));
+      assert(errno == 0 && "memory alloc failed");
+      expected_int->ds = calloc(expected_int_size, sizeof(int));
+      assert(errno == 0 && "memory alloc failed");
+      expected_int->size = expected_int_size;
+      for (int i = 0; i < expected_int->size; ++i) {
+        expected_int->ds[i] = i;
       }
-      queue_nodes_free(queue);
 
-      printf("-- %s: ok\n", cse);
-    }
-  }
+      QueueNode *queue = queue_create((void *)(expected_int->ds + 0));
 
-  {
-    char *cse = "string queue";
-    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
-      printf("---- %s\n", cse);
+      // validation
+      QueueNode *val_node = queue_push(NULL, (void *)&expected_int->ds[0]);
+      assert(val_node == NULL && "unexpected non-NULL");
+      val_node = queue_push(NULL, NULL);
+      assert(val_node == NULL && "unexpected non-NULL");
+      val_node = queue_push(queue, NULL);
+      assert(val_node == queue && "unexpected linked list ptr mismatch");
+      assert(queue_list_len(queue) == 1 && "unexpected length mismatch");
 
-      QueueNode *queue = NULL;
-
-      queue = queue_create(queue_print_node_str, (void *)s1);
-      queue = queue_push(queue, (void *)s1_1);
-      queue = queue_push(queue, (void *)s2);
-      queue = queue_push(queue, (void *)s2);
-      queue_list(queue);
-
-      assert(queue_list_len(queue) == 4 && "unexpected list length");
-      size_t orig_len = queue_list_len(queue);
-      char *exp_queue[] = (char *[]){s1, s1_1, s2, s2};
-      for (int i = 0; i < orig_len; ++i) {
-        void *out;
-        queue = queue_pop(queue, &out);
-        assert(queue_list_len(queue) == orig_len - i - 1 &&
-               "unexpected list length");
-        if (queue) {
-          assert(strcmp((char *)queue->data, exp_queue[i + 1]) == 0);
-        }
-        assert(strcmp((char *)out, exp_queue[i]) == 0 &&
-               "unexpected value in `out`");
-        printf("popped '%s'\n", (char *)out);
+      // functionality
+      for (int i = 1; i < expected_int->size; ++i) {
+        QueueNode *tmp = queue_push(queue, (void *)&expected_int->ds[i]);
+        assert(errno == 0 && "memory alloc failed");
+        assert(tmp == queue && "unexpected eqaulity of ptrs");
       }
-      queue_nodes_free(queue);
+      queue_list(queue, queue_print_node_int, NULL);
+      assert(queue_list_len(queue) == expected_int->size &&
+             "unexpected length mismatch");
+      queue_apply(queue, queue_assert_node_int, expected_int);
+
+      if (expected_int != NULL && expected_int->ds != NULL) {
+        free(expected_int->ds);
+      }
+      if (expected_int != NULL) {
+        free(expected_int);
+      }
+      queue = queue_nodes_free(queue);
 
       printf("-- %s: ok\n", cse);
     }
@@ -1896,42 +1883,120 @@ void ds_queue(int argc, char **argv) {
     if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
       printf("---- %s\n", cse);
 
-      QueueNode *queue = NULL;
-
-      int a_cpy = a;
-      int b_cpy = b;
-      int c_cpy = c;
-      int d_cpy = d;
-      int e_cpy = e;
-
-      queue = queue_create(queue_print_node_int, (void *)&a_cpy);
-      queue = queue_push(queue, (void *)&b_cpy);
-      queue = queue_push(queue, (void *)&c_cpy);
-      queue = queue_push(queue, (void *)&d_cpy);
-      queue = queue_push(queue, (void *)&e_cpy);
-
-      int inc_coef = 5;
-      queue_apply(queue, queue_apply_print_node_int,
-                  (void *)"apply -- node ptr '%p'\n");
-      queue_apply(queue, queue_apply_inc_int, (void *)&inc_coef);
-
-      int exp_queue[] = (int[]){e + inc_coef, d + inc_coef, c + inc_coef,
-                                b + inc_coef, a + inc_coef};
-      size_t orig_len = queue_list_len(queue);
-      for (int i = 0; i < orig_len; ++i) {
-        void *out;
-        queue = queue_pop(queue, &out);
-        assert(queue_list_len(queue) == orig_len - i - 1 &&
-               "unexpected list length");
-        if (queue) {
-          assert(*(int *)queue->data == exp_queue[orig_len - i - 1 - 1]);
-        }
-        assert(*(int *)out == exp_queue[orig_len - i - 1] &&
-               "unexpected value in `out`");
-        printf("popped '%d'\n", *(int *)out);
+      size_t expected_int_size = 10;
+      DatasInt *expected_int = malloc(1 * sizeof(DatasInt));
+      assert(errno == 0 && "memory alloc failed");
+      expected_int->ds = calloc(expected_int_size, sizeof(int));
+      assert(errno == 0 && "memory alloc failed");
+      expected_int->size = expected_int_size;
+      for (int i = 0; i < expected_int->size; ++i) {
+        expected_int->ds[i] = i;
       }
 
-      queue_nodes_free(queue);
+      QueueNode *queue = queue_create((void *)(expected_int->ds + 0));
+      for (int i = 1; i < expected_int->size; ++i) {
+        QueueNode *tmp = queue_push(queue, (void *)&expected_int->ds[i]);
+        assert(errno == 0 && "memory alloc failed");
+        assert(tmp == queue && "unexpected difference of ptrs");
+        queue = tmp;
+      }
+
+      int inc_coef = 5;
+      DatasInt *expected_int_assert = malloc(1 * sizeof(DatasInt));
+      assert(errno == 0 && "memory alloc failed");
+      expected_int_assert->ds = calloc(expected_int_size, sizeof(int));
+      assert(errno == 0 && "memory alloc failed");
+      expected_int_assert->size = expected_int_size;
+      for (int i = 0; i < expected_int_assert->size; ++i) {
+        expected_int_assert->ds[i] = i + inc_coef;
+      }
+
+      queue_apply(queue, queue_apply_print_node_int,
+                  (void *)"node ptr -- %p\n");
+
+      printf("before incrementing\n");
+      queue_list(queue, queue_print_node_int, NULL);
+      queue_apply(queue, queue_apply_inc_int, (void *)&inc_coef);
+      queue_apply(queue, queue_assert_node_int, expected_int_assert);
+      printf("after incrementing\n");
+      queue_list(queue, queue_print_node_int, NULL);
+
+      if (expected_int != NULL && expected_int->ds != NULL) {
+        free(expected_int->ds);
+      }
+      if (expected_int != NULL) {
+        free(expected_int);
+      }
+      if (expected_int_assert != NULL && expected_int_assert->ds != NULL) {
+        free(expected_int_assert->ds);
+      }
+      if (expected_int_assert != NULL) {
+        free(expected_int_assert);
+      }
+      queue = queue_nodes_free(queue);
+
+      printf("-- %s: ok\n", cse);
+    }
+  }
+
+  {
+    char *cse = "queue_pop";
+    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
+      printf("---- %s\n", cse);
+
+      void *out;
+
+      size_t expected_int_size = 10;
+      DatasInt *expected_int = malloc(1 * sizeof(DatasInt));
+      assert(errno == 0 && "memory alloc failed");
+      expected_int->ds = calloc(expected_int_size, sizeof(int));
+      assert(errno == 0 && "memory alloc failed");
+      expected_int->size = expected_int_size;
+      for (int i = 0; i < expected_int->size; ++i) {
+        expected_int->ds[i] = i;
+      }
+
+      QueueNode *queue = queue_create((void *)(expected_int->ds + 0));
+
+      // validation
+      QueueNode *val_node = queue_pop(NULL, &out);
+      assert(val_node == NULL && "unexpected non-NULL");
+      val_node = queue_pop(NULL, NULL);
+      assert(val_node == NULL && "unexpected non-NULL");
+      val_node = queue_pop(queue, NULL);
+      assert(val_node == queue && "list ptrs differ");
+      assert(queue_list_len(queue) == 1 && "unexpected length mismatch");
+
+      // data prep
+      for (int i = 1; i < expected_int->size; ++i) {
+        QueueNode *tmp = queue_push(queue, (void *)&expected_int->ds[i]);
+        assert(errno == 0 && "memory alloc failed");
+        assert(tmp == queue && "unexpected eqaulity of ptrs");
+        queue = tmp;
+      }
+
+      // functionality
+      size_t orig_queue_len = queue_list_len(queue);
+      for (int i = 0; i < expected_int->size; ++i) {
+        printf("queue before popping '%d'\n", expected_int->ds[i]);
+        queue_list(queue, queue_print_node_int, NULL);
+        QueueNode *tmp = queue_pop(queue, &out);
+        assert(tmp != queue && "unexpected ptr equality");
+        queue = tmp;
+        assert(*(int *)out == expected_int->ds[i]);
+        assert(queue_list_len(queue) == orig_queue_len - 1 - i &&
+               "unexpected queue len");
+        printf("queue after popping '%d'\n", expected_int->ds[i]);
+        queue_list(queue, queue_print_node_int, NULL);
+      }
+
+      if (expected_int != NULL && expected_int->ds != NULL) {
+        free(expected_int->ds);
+      }
+      if (expected_int != NULL) {
+        free(expected_int);
+      }
+      queue = queue_nodes_free(queue);
 
       printf("-- %s: ok\n", cse);
     }
