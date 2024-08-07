@@ -2112,7 +2112,7 @@ void algo_md5() {
   unsigned char digest[16];
   char *str[] = {"", "md5", "The quick brown fox jumps over the lazy dog"};
 
-  for (int i = 0; i < 3; ++i) {
+  for (int i = 0; i < sizeof(str) / sizeof(str[i]); ++i) {
     md5(str[i], digest);
     printf("mine: \n");
     md5_print(digest);
