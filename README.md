@@ -6,45 +6,50 @@ Part of this work is to also practice and compose said `tools`.
 ## General structure
 
 `tools` are separated into header files by some logical grouping.
-For example, list related data structures are in `list.h`.
+For example, list related data structures are in `list.h`, trees in `tree.h` etc.
 The header file setup is inspired by header-only library style, but does diverge from it slightly.
 
-## TOC
+## Contents
 
 - list.h
-	- [x] singly linked list
-	- [ ] doubly linked list
-	- [ ] singly circular linked list
-	- [ ] doubly circular linked list
+	- [x] singly linked list `-DSINGLY_LINKED_LIST`
+	- [ ] doubly linked list `-DDOUBLY_LINKED_LIST`
+	- [ ] circular singly linked list `-DCIRCULAR_SINGLY_LINKED_LIST`
+	- [ ] circular doubly linked list `-DCIRCULAR_DOUBLY_LINKED_LIST`
 		- WIP
-	- [x] queue
-	- [x] stack
-	- [x] map
+		- TODO: refactor to apply
+	- [x] stack `-DSTACK`
+	- [x] queue `-DQUEUE`
+	- [x] map `-DMAP`
+		- TODO: refactor to apply
+			- also allow NULL as value, to enable analog to go's eg `map[string]struct{}` construct
+		- TODO: implement array resizing (up/down) and re-org on data after resize
 - TODO: trees
-	- [ ] binary
-	- [ ] trie
-	- [ ] b
+	- [ ] binary `-DBINARY_TREE`
+	- [ ] trie `-DTRIE_TREE`
+	- [ ] b `-DB_TREE`
 	- maybe something else
 - TODO: sorting
-	- [ ] quick
+	- [ ] quick `-DQUICK_SORT`
 	- maybe something else, eg: selection, bubble, insertion, merge
 - TODO: searching
-	- [ ] linear
-	- [ ] binary
-- TODO: strings
+	- [ ] linear `-DLINEAR_SEARCH`
+	- [ ] binary `-DBINARY_SEARCH`
+- TODO: strings `-DSTRINGS`
 	- [ ] string struct with len
 	- [ ] split by char
 	- [ ] other utility funcs
-- utils.h
+- utils.h `-DUTILS`
 	- [x] shift
 	- [x] power
-	- [x] lexer
+- lex.h `-DLEX`
+	- [x] tokenizing utilities
 - algo_misc.h
-	- [x] two sum
+	- [x] two sum `-DTWO_SUM`
 	- [ ] other interesting algorithms/problems
-- md5.h
+- md5.h `-DMD5`
 	- [x] md5
-- log.h
+- log.h `-DLOG`
 	- [x] logging to stderr
 	- [x] logging to specified FILE
 	- [x] logging to buffer
@@ -66,8 +71,21 @@ clang main.c -DQUEUE && ./a.out --run all
 
 ## Notes
 
+* Currently refactor in progress
+	* making structs slimmer
+	* relying more on an `apply` method
+	* more unified and clearer NULL checks
+	* malloc error handling
+	* update tests to `apply` approach
 * This repo is WIP, I`ll be adding things as time goes on.
 * Main things from deprecated headers have been ported, but couple interesting ideas was left. Please see this commit `4dcd5527ab18e1d06e7d04d8523c0cbe28f3951f` to see the `depr` dir as it is the last commit (currently) containing it.
+
+## TODOs
+
+* Make main runnable, when all define flags are provided
+```sh
+clang main.c -DSINGLY_LINKED_LIST -DCIRCULAR_DOUBLY_LINKED_LIST -DMAP -DTWO_SUM -DMD5 -DLOG -DUTILS -DLEX -DSTACK -DQUEUE && ./a.out
+```
 
 ## Author
 
