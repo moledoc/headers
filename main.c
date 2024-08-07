@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -224,6 +225,7 @@ void ds_singly_linked_list(int argc, char **argv) {
       // functionality
       for (int i = 1; i < expected_int->size; ++i) {
         SLLNode *tmp = sll_add(ll, (void *)&expected_int->ds[i]);
+        assert(errno == 0 && "memory alloc failed");
         assert(tmp != ll && "unexpected eqaulity of ptrs");
         ll = tmp;
       }
@@ -263,6 +265,7 @@ void ds_singly_linked_list(int argc, char **argv) {
       SLLNode *ll = sll_create(sll_cmp_int, (void *)&expected_int->ds[0]);
       for (int i = 1; i < expected_int->size; ++i) {
         SLLNode *tmp = sll_add(ll, (void *)&expected_int->ds[i]);
+        assert(errno == 0 && "memory alloc failed");
         assert(tmp != ll && "unexpected eqaulity of ptrs");
         ll = tmp;
       }
@@ -329,6 +332,7 @@ void ds_singly_linked_list(int argc, char **argv) {
       // functionality
       for (int i = 1; i < expected_int->size; ++i) {
         SLLNode *tmp = sll_append(ll, (void *)&expected_int->ds[i]);
+        assert(errno == 0 && "memory alloc failed");
         assert(tmp == ll && "unexpected eqaulity of ptrs");
       }
       sll_list(ll, sll_print_node_int, NULL);
@@ -375,6 +379,7 @@ void ds_singly_linked_list(int argc, char **argv) {
       // data prep
       for (int i = 1; i < expected_int->size; ++i) {
         SLLNode *tmp = sll_add(ll, (void *)&expected_int->ds[i]);
+        assert(errno == 0 && "memory alloc failed");
         assert(tmp != ll && "unexpected eqaulity of ptrs");
         ll = tmp;
       }
@@ -430,6 +435,7 @@ void ds_singly_linked_list(int argc, char **argv) {
       // data prep
       for (int i = 1; i < expected_int->size; ++i) {
         SLLNode *tmp = sll_add(ll, (void *)&expected_int->ds[i]);
+        assert(errno == 0 && "memory alloc failed");
         assert(tmp != ll && "unexpected eqaulity of ptrs");
         ll = tmp;
       }
@@ -492,6 +498,7 @@ void ds_singly_linked_list(int argc, char **argv) {
       // data prep
       for (int i = 1; i < expected_int->size; ++i) {
         SLLNode *tmp = sll_add(ll, (void *)&expected_int->ds[i]);
+        assert(errno == 0 && "memory alloc failed");
         assert(tmp != ll && "unexpected eqaulity of ptrs");
         ll = tmp;
       }
