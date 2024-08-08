@@ -37,13 +37,17 @@ void algo_two_sum_print_value(void *value) {
   return;
 }
 
-void algo_two_sum_free_value(void *value) { if(value) free(value); }
+void algo_two_sum_free_value(void *value) {
+  if (value)
+    free(value);
+}
 
 int *two_sum(int *nums, size_t nums_len, int target) {
   int *res = malloc(2 * sizeof(int));
   res[0] = res[1] = -1;
 
-  MAP_BUCKETS_SIZE = 2048;
+  MAP_BUCKETS_SIZE =
+      40001; // TODO: change to 2053, once MAP resizing is in place
   Map *map = map_create(map_hash, MapKeyInt, algo_two_sum_print_value,
                         algo_two_sum_free_value);
   for (int i = 0; i < nums_len; ++i) {

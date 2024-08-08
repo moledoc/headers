@@ -472,8 +472,8 @@ typedef struct {
 } Map;
 
 enum {
-  MAP_BUCKETS_SIZE =
-      521, // MAP_BUCKETS_SIZE is the buckets size for Map when
+  MAP_BUCKETS_SIZE_DEFAULT =
+      521, // MAP_BUCKETS_SIZE_DEFAULT is the buckets size for Map when
            // creating a new map.
            // Guarantee of no common factor for array size, hash
            // multiplier likely data values;
@@ -485,6 +485,8 @@ enum {
           // Empirically shown to be good;
           // ref: The Practice of Programming, B. Kernighan, R. Pike, p 56
 };
+
+int MAP_BUCKETS_SIZE = MAP_BUCKETS_SIZE_DEFAULT;
 
 // map_hash is default hashing function
 int map_hash(enum MapKeyType key_type, void *key, size_t cap);
