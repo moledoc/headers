@@ -86,7 +86,7 @@ clang main.c -DQUEUE && ./a.out --run all
 ```sh
 clang main.c -DSINGLY_LINKED_LIST -DCIRCULAR_DOUBLY_LINKED_LIST -DMAP -DTWO_SUM -DMD5 -DLOG -DUTILS -DLEX -DSTACK -DQUEUE && ./a.out
 ```
-- NOTE: the following is working, so need to look into `-DLEX`, `-DCIRCULAR_DOUBLY_LINKED_LIST`, `-DTWO_SUM`, `-DLEX`
+- NOTE: the following is working, so need to look into `-DLEX`, `-DCIRCULAR_DOUBLY_LINKED_LIST`, `-DTWO_SUM`
 ```sh
 clang main.c -DSINGLY_LINKED_LIST -DMAP -DMD5 -DLOG -DUTILS -DSTACK -DQUEUE && ./a.out
 ```

@@ -2110,17 +2110,23 @@ void algo_two_sum() {
 
 void algo_md5() {
   unsigned char digest[16];
-  char *str[] = {"", "md5", "The quick brown fox jumps over the lazy dog"};
+  char *str[] = {"a", "md5", "The quick brown fox jumps over the lazy dog"};
 
   for (int i = 0; i < sizeof(str) / sizeof(str[i]); ++i) {
     md5(str[i], digest);
     printf("mine: \n");
     md5_print(digest);
     printf("system: \n");
-    char cmd[128];
-    memset(cmd, '\0', sizeof(cmd));
-    snprintf(cmd, sizeof(cmd), "printf '%s' \"%s\" | md5sum", str[i]);
+    char *cmd = calloc(129, sizeof(char));
+    if (cmd == NULL) {
+      printf("allocating memory failed: %s\n", strerror(errno));
+      continue;
+    }
+    snprintf(cmd, sizeof(cmd) - 1, "printf '%s' \"%s\" | md5sum", str[i]);
     system(cmd);
+    if (cmd != NULL) {
+      free(cmd);
+    }
   }
 }
 
