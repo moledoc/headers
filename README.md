@@ -39,6 +39,8 @@ The header file setup is inspired by header-only library style, but does diverge
 	- [ ] string struct with len
 	- [ ] split by char
 	- [ ] other utility funcs
+- TODO: arena `-DARENA` (i.e. memory arena)
+- TODO: MAYBE: really naive garbage collector type thingy
 - utils.h `-DUTILS`
 	- [x] shift
 	- [x] power
