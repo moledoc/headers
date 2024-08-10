@@ -35,6 +35,17 @@ int main() {
   memreg_print(1 * sizeof(kv), kv_fmt, tst3->k, tst3->v);
 
   memreg_dump(region);
+
+  memreg_clear(region, tst);
+  memreg_clear(region, tst2);
+  memreg_clear(region, tst3);
+
+  tst3 = memreg_alloc(region, 1 * sizeof(kv *));
+  tst3->k = 98;
+  tst3->v = 99;
+  memreg_print(1 * sizeof(kv), kv_fmt, tst3->k, tst3->v);
+
+  memreg_dump(region);
   region = memreg_delete(region);
   memreg_dump(region);
 

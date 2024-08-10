@@ -9,6 +9,7 @@ typedef struct MemReg {
   struct MemReg *next;
   uint32_t capacity;
   uint32_t offset;
+  uint32_t ref_count;
   uintptr_t data[];
 } MemReg;
 
@@ -19,7 +20,7 @@ enum {
 uint32_t MEMREG_CAPACITY = MEMREG_CAPACITY_DEFAULT;
 
 // memreg_zero zeros the region
-void memreg_zero(MemReg *region);
+void memreg_zero_data(MemReg *region);
 
 // maps memory
 MemReg *memreg_create();
@@ -35,6 +36,10 @@ void memreg_print(uint32_t data_size, char *fmt, ...);
 // memreg_dump dumps memory region metadata and data to stderr
 void memreg_dump(MemReg *region);
 
+// memreg_clear decrements the ref count and if it reaches zero, clears the
+// memory region for reuse
+void memreg_clear(MemReg *region, void *data);
+
 #endif // MEMREG // HEADER
 
 // }
@@ -47,7 +52,7 @@ void memreg_dump(MemReg *region);
 #include <unistd.h>
 // #include <pthread.h> // TODO: add concurrency safety
 
-void memreg_zero(MemReg *region) {
+void memreg_zero_data(MemReg *region) {
   for (int i = 0; i < region->capacity; ++i) {
     region->data[i] = 0;
   }
@@ -63,10 +68,11 @@ MemReg *memreg_create() {
   if (region == MAP_FAILED) {
     // TODO: handle mmap failure
   }
-  memreg_zero(region);
+  memreg_zero_data(region);
   region->next = NULL;
   region->capacity = MEMREG_CAPACITY;
   region->offset = 0;
+  region->ref_count = 0;
   return region;
 }
 
@@ -94,6 +100,7 @@ void *memreg_alloc(MemReg *region, uint32_t data_size) {
   if (region->offset + data_size < region->capacity) {
     uintptr_t *me = region->data + region->offset;
     region->offset += 1; // data_size;
+    region->ref_count += 1;
     return me;
   }
 
@@ -155,6 +162,24 @@ void memreg_print(uint32_t data_size, char *fmt, ...) {
   vsnprintf(buf, sizeof(buf) - 1, fmt, args);
   va_end(args);
   write(fileno(stdout), buf, sizeof(buf));
+  return;
+}
+
+void memreg_clear(MemReg *region, void *data) {
+  int tmp;
+  for (; (tmp = ((uintptr_t *)data - region->data) / sizeof(uintptr_t)) > 0 &&
+         tmp >= region->capacity;
+       region = region->next) {
+    ;
+  }
+
+  region->ref_count -= 1;
+
+  if (region->ref_count == 0) {
+    memreg_zero_data(region);
+    region->offset = 0;
+  }
+
   return;
 }
 
