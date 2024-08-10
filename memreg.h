@@ -89,17 +89,12 @@ void *memreg_delete(MemReg *region) {
 }
 
 void *memreg_alloc(MemReg *region, uint32_t data_size) {
-  // check if fits in current region
-  // if yes, then return
-  // if no, then
-  // // if not exist, create
-  // check next region
 
   data_size = (data_size + sizeof(uintptr_t) - 1) / sizeof(uintptr_t);
 
   if (region->offset + data_size < region->capacity) {
     uintptr_t *me = region->data + region->offset;
-    region->offset += 1; // data_size;
+    region->offset += data_size;
     region->ref_count += 1;
     return me;
   }
