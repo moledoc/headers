@@ -15,29 +15,40 @@ typedef struct MemReg {
 
 enum {
   MEMREG_CAPACITY_DEFAULT = 1 * 1024,
+  MEMREG_STREAM_STDOUT = 1,
+  MEMREG_STREAM_STDERR = 2,
+  MEMREG_STREAM_DEFAULT = MEMREG_STREAM_STDERR,
 };
 
 uint32_t MEMREG_CAPACITY = MEMREG_CAPACITY_DEFAULT;
+uint32_t MEMREG_STREAM = MEMREG_STREAM_DEFAULT;
 
-// memreg_zero zeros the region
+// memreg_zero zeros the given region
 void memreg_zero_data(MemReg *region);
 
-// maps memory
+// memreg_create requests memory and returns a memory region
+// that can be used by the program
+// allocs memory (techincally maps)
 MemReg *memreg_create();
 
-// unmaps memory
+// memreg_delete releases requested memory
+// frees memory (technically unmaps)
 void *memreg_delete(MemReg *region);
 
-// memreg_alloc allocates memory
+// memreg_alloc allocates memory from region
+// doesn't allocate additional memory,
+// unless current region doesn't have enough to store data
 void *memreg_alloc(MemReg *region, uint32_t data_size);
 
+// memreg_print prints data with format (fmt) to MEMREG_STREAM
 void memreg_print(uint32_t data_size, char *fmt, ...);
 
-// memreg_dump dumps memory region metadata and data to stderr
+// memreg_dump dumps each region's metadata and data to MEMREG_STREAM
+// data is represented as ptr addresses
 void memreg_dump(MemReg *region);
 
 // memreg_clear decrements the ref count and if it reaches zero, clears the
-// memory region for reuse
+// memory region, so it could be reused.
 void memreg_clear(MemReg *region, void *data);
 
 #endif // MEMREG // HEADER
@@ -123,20 +134,29 @@ void memreg_dump(MemReg *region) {
     return;
   }
 
-  FILE *stream = stdout;
-  fputs("----------------\n", stream);
+  char data_buf[(sizeof(unsigned long) + sizeof(char)) * region->capacity + 1];
+  str_zero(data_buf, '\0', sizeof(data_buf));
 
-  char buf[65];
-  str_zero(buf, '\0', sizeof(buf));
-  snprintf(buf, sizeof(buf) - 1,
-           "next: %p\ncapacity: %u\noffset: %u\ndata: ", region->next,
-           region->capacity, region->offset);
-  write(fileno(stream), buf, sizeof(buf));
-
+  int offset = 0;
   for (int i = 0; i < region->capacity; ++i) {
-    printf("%lu ", *(region->data + i));
+    offset += snprintf(data_buf + offset, 32 + 1, "%p ", *(region->data + i));
   }
-  putchar('\n');
+
+  char *fmt = "----------------\n"
+              "memory dump:\n"
+              "\tnext: %p\n"
+              "\tcapacity: %u\n"
+              "\toffset: %u\n"
+              "\tdata: %s\n"
+              "----------------\n";
+  size_t fmt_size = strlen(fmt);
+  char buf[fmt_size + sizeof(uintptr_t) + 2 * sizeof(unsigned int) +
+           (sizeof(data_buf) - 1) + 1];
+  str_zero(buf, '\0', sizeof(buf));
+  snprintf(buf, sizeof(buf) - 1, fmt, region->next, region->capacity,
+           region->offset, data_buf);
+
+  write(MEMREG_STREAM, buf, sizeof(buf));
 
   return memreg_dump(region->next);
 }
@@ -156,16 +176,22 @@ void memreg_print(uint32_t data_size, char *fmt, ...) {
   str_zero(buf, '\0', sizeof(buf));
   vsnprintf(buf, sizeof(buf) - 1, fmt, args);
   va_end(args);
-  write(fileno(stdout), buf, sizeof(buf));
+  write(MEMREG_STREAM, buf, sizeof(buf));
   return;
 }
 
 void memreg_clear(MemReg *region, void *data) {
-  int tmp;
-  for (; (tmp = ((uintptr_t *)data - region->data) / sizeof(uintptr_t)) > 0 &&
-         tmp >= region->capacity;
+  int offs_in_reg;
+  for (; region != NULL &&
+         (offs_in_reg =
+              ((uintptr_t *)data - region->data) / sizeof(uintptr_t)) > 0 &&
+         offs_in_reg >= region->capacity;
        region = region->next) {
     ;
+  }
+
+  if (region == NULL) {
+    return;
   }
 
   region->ref_count -= 1;
