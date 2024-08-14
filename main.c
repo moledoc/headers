@@ -2031,6 +2031,139 @@ void ds_queue(int argc, char **argv) {
 // }
 
 // {
+#ifdef MEMREG
+
+#ifndef UTILS
+#define UTILS
+#endif // UTILS
+
+#include "utils.h"
+
+#ifdef UTILS
+#undef UTILS
+#endif // UTILS
+
+#include "memreg.h"
+
+typedef struct {
+  int k;
+  int v;
+} kv;
+
+typedef struct {
+  int k1;
+  int v1;
+  int k2;
+  int v2;
+  int k3;
+  int v3;
+  int k4;
+  int v4;
+} kv2;
+
+char *kv_fmt = "HE3RE -- {%c:%d}\n";
+char *kv2_fmt = "HE4RE -- {%c:%d, %c:%d, %c:%d, %c:%d}\n";
+
+void ds_memreg(int argc, char **argv) {
+  char *prog_name = shift(&argc, &argv);
+
+  char *run = "";
+  for (; argc > 0;) {
+    char *arg = shift(&argc, &argv);
+    if (strcmp("--run", arg) == 0 && argc > 0) {
+      run = shift(&argc, &argv);
+    }
+  }
+
+  {
+    char *cse = "memreg_create";
+    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
+      printf("---- %s\n", cse);
+
+      int cap = 1337;
+      MEMREG_CAPACITY = cap;
+      MemReg *region = memreg_create();
+      assert(region != NULL && "unexpected NULL");
+
+      assert(region->next == NULL && "unexpected non-null");
+      assert(region->capacity == cap && "unexpected size diff");
+      assert(region->offset == 0 && "unexpected non-zero");
+      assert(region->ref_count == 0 && "unexpected non-zero");
+      for (int i = 0; i < cap; ++i) {
+        assert(region->data[i] == 0 && "unexpected data value");
+      }
+
+      region = memreg_delete(region);
+      assert(region == NULL && "unexpected non-NULL");
+
+      cap = 2;
+      MEMREG_CAPACITY = cap;
+      region = memreg_create();
+      assert(region != NULL && "unexpected NULL");
+
+      // force creating next region
+      // region 1_1
+      char *tst1_1 = memreg_alloc(region, 1 * sizeof(char));
+      memcpy(tst1_1, "a", 1);
+
+      assert(region->next == NULL && "unexpected non-null");
+      assert(region->capacity == cap && "unexpected size diff");
+      assert(region->offset == 1 && "unexpected offset");
+      assert(region->ref_count == 1 && "unexpected ref-count value");
+      assert(region->data[0] != 0 && "unexpected data value");
+      assert(region->data[1] == 0 && "unexpected data value");
+
+      // region 1_2
+      char *tst1_2 = memreg_alloc(region, 1 * sizeof(char));
+      memcpy(tst1_2, "b", 1);
+
+      assert(region->next == NULL && "unexpected non-null");
+      assert(region->capacity == cap && "unexpected size diff");
+      assert(region->offset == 2 && "unexpected offset");
+      assert(region->ref_count == 2 && "unexpected ref-count value");
+      assert(region->data[0] != 0 && "unexpected data value");
+      assert(region->data[1] != 0 && "unexpected data value");
+
+      // region 2
+      char *tst2 = memreg_alloc(region, 2 * sizeof(char));
+      assert(region->next != NULL && "unexpected null");
+      memcpy(tst2, "aa", 2 * sizeof(char));
+
+      MemReg *region2 = region->next;
+      assert(region2 != NULL && "unexpected null");
+      assert(region2->next == NULL && "unexpected non-null");
+      assert(region2->capacity == cap && "unexpected size diff");
+      assert(region2->offset == 1 && "unexpected offset");
+      assert(region2->ref_count == 1 && "unexpected ref-count value");
+      assert(region2->data[0] != 0 && "unexpected data value");
+      assert(region2->data[1] == 0 && "unexpected data value");
+
+      memreg_print(2 * sizeof(char), "contents of 'tst2': '%s'\n", tst2);
+      memreg_dump(region);
+
+      region = memreg_delete(region);
+
+      printf("-- %s: ok\n", cse);
+    }
+  }
+
+  {
+    char *cse = "memreg_alloc";
+    if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
+      printf("---- %s\n", cse);
+
+      // TODO:
+
+      printf("-- %s: ok\n", cse);
+    }
+  }
+
+  return;
+}
+#endif // MEMREG
+// }
+
+// {
 #if defined(TWO_SUM)
 
 #include "algo_misc.h"
@@ -2339,6 +2472,10 @@ int main(int argc, char **argv) {
 #ifdef QUEUE
   ds_queue(argc, argv);
 #endif // QUEUE
+
+#ifdef MEMREG
+  ds_memreg(argc, argv);
+#endif // MEMREG
 
   return 0;
 }

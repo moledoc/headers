@@ -24,10 +24,12 @@ The header file setup is inspired by header-only library style, but does diverge
 		- TODO: refactor to apply
 			- also allow NULL as value, to enable analog to go's eg `map[string]struct{}` construct
 		- TODO: implement array resizing (up/down) and re-org on data after resize
+	- [ ] ring buffer/circular buffer (?) `-DRING_BUFFER
 - TODO: trees
 	- [ ] binary `-DBINARY_TREE`
 	- [ ] trie `-DTRIE_TREE`
 	- [ ] b `-DB_TREE`
+	- [ ] red-black `-DRED_BLACK_TREE`
 	- maybe something else
 - TODO: sorting
 	- [ ] quick `-DQUICK_SORT`
@@ -49,6 +51,7 @@ The header file setup is inspired by header-only library style, but does diverge
 - algo_misc.h
 	- [x] two sum `-DTWO_SUM`
 	- [ ] other interesting algorithms/problems
+	- [ ] Run-length encoding (RLE) `-DRLE`
 - md5.h `-DMD5`
 	- [x] md5
 - log.h `-DLOG`
