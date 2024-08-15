@@ -2175,20 +2175,22 @@ void ds_memreg(int argc, char **argv) {
       tst3->v = 99;
 
       kv2 *tst4 = memreg_alloc(region, 1 * sizeof(kv2));
-      tst4->k1 = 98;
+      tst4->k1 = 100;
       tst4->v1 = 99;
-      tst4->k4 = 97;
-      tst4->v4 = 100;
+      tst4->k4 = 94;
+      tst4->v4 = 93;
 
       kv2 *tst5 = memreg_alloc(region, 1 * sizeof(kv2));
       tst5->k1 = 98;
       tst5->v1 = 99;
-      tst5->k2 = 99;
-      tst5->v2 = 98;
-      tst5->k3 = 99;
-      tst5->v3 = 98;
-      tst5->k4 = 99;
-      tst5->v4 = 98;
+      tst5->k2 = 100;
+      tst5->v2 = 101;
+      tst5->k3 = 102;
+      tst5->v3 = 103;
+      tst5->k4 = 104;
+      tst5->v4 = 105;
+
+      memreg_dump(region);
 
       memreg_print(tst, "HE1RE -- %s\n", 0);
       memreg_print(tst2, "HE2RE -- %d\n", 1, *tst2);
@@ -2197,9 +2199,52 @@ void ds_memreg(int argc, char **argv) {
                    tst4->k3, tst4->v3, tst4->k4, tst4->v4);
       memreg_print(tst5, kv2_fmt, 8, tst5->k1, tst5->v1, tst5->k2, tst5->v2,
                    tst5->k3, tst5->v3, tst5->k4, tst5->v4);
-      memreg_dump(region);
 
-      // printf("%s\n", region->data[0]);
+      // tst_str
+      char tst_str_buf[*(uint32_t *)(region->data + 0) + 1];
+      memset(tst_str_buf, '\0', sizeof(tst_str_buf));
+      memcpy(tst_str_buf, tst, *(uint32_t *)(region->data + 0));
+      assert(strcmp(tst_str_buf, tst_str) == 0 && "data mismtach");
+
+      // tst2
+      assert(*(uint32_t *)(region->data + 2) == sizeof(int) && "mismatch size");
+      assert(*(uint32_t *)(region->data + 3) == *tst2 && "data mismtach");
+
+      // tst3
+      assert(*(uint32_t *)(region->data + 4) == sizeof(kv) && "mismatch size");
+      assert(((kv *)(region->data + 5))->k == tst3->k && "data mismatch");
+      assert(((kv *)(region->data + 5))->v == tst3->v && "data mismatch");
+
+      // tst4
+      assert(*(uint32_t *)(region->data + 6) == sizeof(kv2) && "mismatch size");
+      assert(((kv *)(region->data + 7))->k == tst4->k1 && "data mismatch");
+      assert(((kv *)(region->data + 7))->v == tst4->v1 && "data mismatch");
+
+      assert(((kv *)(region->data + 8))->k == tst4->k2 && "data mismatch");
+      assert(((kv *)(region->data + 8))->v == tst4->v2 && "data mismatch");
+
+      assert(((kv *)(region->data + 9))->k == tst4->k3 && "data mismatch");
+      assert(((kv *)(region->data + 9))->v == tst4->v3 && "data mismatch");
+
+      assert(((kv *)(region->data + 10))->k == tst4->k4 && "data mismatch");
+      assert(((kv *)(region->data + 10))->v == tst4->v4 && "data mismatch");
+
+      // tst5
+      assert(*(uint32_t *)(region->data + 11) == sizeof(kv2) &&
+             "mismatch size");
+      assert(((kv *)(region->data + 12))->k == tst5->k1 && "data mismatch");
+      assert(((kv *)(region->data + 12))->v == tst5->v1 && "data mismatch");
+
+      assert(((kv *)(region->data + 13))->k == tst5->k2 && "data mismatch");
+      assert(((kv *)(region->data + 13))->v == tst5->v2 && "data mismatch");
+
+      assert(((kv *)(region->data + 14))->k == tst5->k3 && "data mismatch");
+      assert(((kv *)(region->data + 14))->v == tst5->v3 && "data mismatch");
+
+      assert(((kv *)(region->data + 15))->k == tst5->k4 && "data mismatch");
+      assert(((kv *)(region->data + 15))->v == tst5->v4 && "data mismatch");
+
+      region = memreg_delete(region);
 
       printf("-- %s: ok\n", cse);
     }
