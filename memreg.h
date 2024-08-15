@@ -48,7 +48,7 @@ void *memreg_alloc(MemReg *region, uint32_t data_size);
 void memreg_clear(MemReg *region, void *data, uint32_t data_size);
 
 // memreg_print prints data with format (fmt) to MEMREG_STREAM
-void memreg_print(uint32_t data_size, char *fmt, ...);
+void memreg_print(void *data, char *fmt, int argscount, ...);
 
 // memreg_dump dumps each region's metadata and data to MEMREG_STREAM
 // data is represented as ptr addresses
@@ -110,12 +110,16 @@ void *memreg_delete(MemReg *region) {
 
 void *memreg_alloc(MemReg *region, uint32_t data_size) {
 
-  data_size = (data_size + sizeof(uintptr_t) - 1) / sizeof(uintptr_t);
+  uint32_t data_size_norm =
+      (data_size + sizeof(uintptr_t) - 1) / sizeof(uintptr_t);
 
-  if (region->offset + data_size <= region->capacity) {
+  if (region->offset + data_size_norm + 1 <=
+      region->capacity) { // TODO: store len and then data
     uintptr_t *me = region->data + region->offset;
-    region->offset += data_size;
+    region->offset += data_size_norm + 1;
     region->ref_count += 1;
+    *me = data_size;
+    ++me;
     return me;
   }
 
@@ -157,9 +161,9 @@ void memreg_clear(MemReg *region, void *data, uint32_t data_size) {
   return;
 }
 
-void str_zero(char *dest, char val, size_t size) {
+void str_zero(char *dest, size_t size) {
   for (int i = 0; i < size; ++i) {
-    dest[i] = val;
+    dest[i] = '\0';
   }
 }
 
@@ -169,7 +173,7 @@ void memreg_dump(MemReg *region) {
   }
 
   char data_buf[(sizeof(unsigned long) + sizeof(char)) * region->capacity + 1];
-  str_zero(data_buf, '\0', sizeof(data_buf));
+  str_zero(data_buf, sizeof(data_buf));
 
   int offset = 0;
   for (int i = 0; i < region->capacity; ++i) {
@@ -188,7 +192,7 @@ void memreg_dump(MemReg *region) {
   size_t fmt_size = strlen(fmt);
   char buf[fmt_size + sizeof(uintptr_t) + 2 * sizeof(unsigned int) +
            (sizeof(data_buf) - 1) + 1];
-  str_zero(buf, '\0', sizeof(buf));
+  str_zero(buf, sizeof(buf));
   snprintf(buf, sizeof(buf) - 1, fmt, region, region->next, region->capacity,
            region->offset, data_buf);
 
@@ -205,12 +209,17 @@ size_t str_len(const char *s1) {
   return len;
 }
 
-void memreg_print(uint32_t data_size, char *fmt, ...) {
+void memreg_print(void *data, char *fmt, int argscount, ...) {
   va_list args;
-  va_start(args, fmt);
+  va_start(args, argscount);
+  uint32_t data_size = *(uint32_t *)(data - sizeof(uintptr_t));
   char buf[str_len(fmt) + data_size + 1];
-  str_zero(buf, '\0', sizeof(buf));
-  vsnprintf(buf, sizeof(buf) - 1, fmt, args);
+  str_zero(buf, sizeof(buf));
+  if (argscount == 0) {
+    snprintf(buf, sizeof(buf) - 1, fmt, data);
+  } else {
+    vsnprintf(buf, sizeof(buf) - 1, fmt, args);
+  }
   va_end(args);
   write(MEMREG_STREAM, buf, sizeof(buf));
   return;

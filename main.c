@@ -2096,7 +2096,7 @@ void ds_memreg(int argc, char **argv) {
       region = memreg_delete(region);
       assert(region == NULL && "unexpected non-NULL");
 
-      cap = 2;
+      cap = 4;
       MEMREG_CAPACITY = cap;
       region = memreg_create();
       assert(region != NULL && "unexpected NULL");
@@ -2104,14 +2104,16 @@ void ds_memreg(int argc, char **argv) {
       // force creating next region
       // region 1_1
       char *tst1_1 = memreg_alloc(region, 1 * sizeof(char));
-      memcpy(tst1_1, "a", 1);
+      memcpy(tst1_1, "a", 1 * sizeof(char));
 
       assert(region->next == NULL && "unexpected non-null");
       assert(region->capacity == cap && "unexpected size diff");
-      assert(region->offset == 1 && "unexpected offset");
+      assert(region->offset == 2 && "unexpected offset");
       assert(region->ref_count == 1 && "unexpected ref-count value");
-      assert(region->data[0] != 0 && "unexpected data value");
-      assert(region->data[1] == 0 && "unexpected data value");
+      assert(region->data[0] == 1 && "unexpected data value");
+      assert(region->data[1] != 0 && "unexpected data value");
+      assert(region->data[2] == 0 && "unexpected data value");
+      assert(region->data[3] == 0 && "unexpected data value");
 
       // region 1_2
       char *tst1_2 = memreg_alloc(region, 1 * sizeof(char));
@@ -2119,10 +2121,12 @@ void ds_memreg(int argc, char **argv) {
 
       assert(region->next == NULL && "unexpected non-null");
       assert(region->capacity == cap && "unexpected size diff");
-      assert(region->offset == 2 && "unexpected offset");
+      assert(region->offset == 4 && "unexpected offset");
       assert(region->ref_count == 2 && "unexpected ref-count value");
-      assert(region->data[0] != 0 && "unexpected data value");
+      assert(region->data[0] == 1 && "unexpected data value");
       assert(region->data[1] != 0 && "unexpected data value");
+      assert(region->data[2] == 1 && "unexpected data value");
+      assert(region->data[3] != 0 && "unexpected data value");
 
       // region 2
       char *tst2 = memreg_alloc(region, 2 * sizeof(char));
@@ -2133,12 +2137,13 @@ void ds_memreg(int argc, char **argv) {
       assert(region2 != NULL && "unexpected null");
       assert(region2->next == NULL && "unexpected non-null");
       assert(region2->capacity == cap && "unexpected size diff");
-      assert(region2->offset == 1 && "unexpected offset");
+      assert(region2->offset == 2 && "unexpected offset");
       assert(region2->ref_count == 1 && "unexpected ref-count value");
-      assert(region2->data[0] != 0 && "unexpected data value");
-      assert(region2->data[1] == 0 && "unexpected data value");
+      assert(region2->data[0] == 2 && "unexpected data value");
+      assert(region2->data[1] != 0 && "unexpected data value");
+      assert(region2->data[2] == 0 && "unexpected data value");
 
-      memreg_print(2 * sizeof(char), "contents of 'tst2': '%s'\n", tst2);
+      memreg_print(tst2, "contents of 'tst2': '%s'\n", 0);
       memreg_dump(region);
 
       region = memreg_delete(region);
@@ -2152,7 +2157,49 @@ void ds_memreg(int argc, char **argv) {
     if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
       printf("---- %s\n", cse);
 
-      // TODO:
+      int cap = 32;
+      MEMREG_CAPACITY = cap;
+      MemReg *region = memreg_create();
+      assert(region != NULL && "unexpected NULL");
+
+      char *tst_str = "test";
+      size_t tst_str_len = strlen(tst_str);
+      char *tst = memreg_alloc(region, tst_str_len * sizeof(char));
+      memcpy(tst, tst_str, tst_str_len);
+
+      int *tst2 = memreg_alloc(region, 1 * sizeof(int));
+      *tst2 = 127;
+
+      kv *tst3 = memreg_alloc(region, 1 * sizeof(kv));
+      tst3->k = 98;
+      tst3->v = 99;
+
+      kv2 *tst4 = memreg_alloc(region, 1 * sizeof(kv2));
+      tst4->k1 = 98;
+      tst4->v1 = 99;
+      tst4->k4 = 97;
+      tst4->v4 = 100;
+
+      kv2 *tst5 = memreg_alloc(region, 1 * sizeof(kv2));
+      tst5->k1 = 98;
+      tst5->v1 = 99;
+      tst5->k2 = 99;
+      tst5->v2 = 98;
+      tst5->k3 = 99;
+      tst5->v3 = 98;
+      tst5->k4 = 99;
+      tst5->v4 = 98;
+
+      memreg_print(tst, "HE1RE -- %s\n", 0);
+      memreg_print(tst2, "HE2RE -- %d\n", 1, *tst2);
+      memreg_print(tst3, kv_fmt, 2, tst3->k, tst3->v);
+      memreg_print(tst4, kv2_fmt, 8, tst4->k1, tst4->v1, tst4->k2, tst4->v2,
+                   tst4->k3, tst4->v3, tst4->k4, tst4->v4);
+      memreg_print(tst5, kv2_fmt, 8, tst5->k1, tst5->v1, tst5->k2, tst5->v2,
+                   tst5->k3, tst5->v3, tst5->k4, tst5->v4);
+      memreg_dump(region);
+
+      // printf("%s\n", region->data[0]);
 
       printf("-- %s: ok\n", cse);
     }
