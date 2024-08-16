@@ -2205,15 +2205,21 @@ void ds_memreg(int argc, char **argv) {
       memset(tst_str_buf, '\0', sizeof(tst_str_buf));
       memcpy(tst_str_buf, tst, *(uint32_t *)(region->data + 0));
       assert(strcmp(tst_str_buf, tst_str) == 0 && "data mismtach");
+      assert(memreg_alloced_size(tst) == tst_str_len &&
+             "unexpected alloced size");
 
       // tst2
       assert(*(uint32_t *)(region->data + 2) == sizeof(int) && "mismatch size");
       assert(*(uint32_t *)(region->data + 3) == *tst2 && "data mismtach");
+      assert(memreg_alloced_size(tst2) == sizeof(int) &&
+             "unexpected alloced size");
 
       // tst3
       assert(*(uint32_t *)(region->data + 4) == sizeof(kv) && "mismatch size");
       assert(((kv *)(region->data + 5))->k == tst3->k && "data mismatch");
       assert(((kv *)(region->data + 5))->v == tst3->v && "data mismatch");
+      assert(memreg_alloced_size(tst3) == sizeof(kv) &&
+             "unexpected alloced size");
 
       // tst4
       assert(*(uint32_t *)(region->data + 6) == sizeof(kv2) && "mismatch size");
@@ -2229,6 +2235,9 @@ void ds_memreg(int argc, char **argv) {
       assert(((kv *)(region->data + 10))->k == tst4->k4 && "data mismatch");
       assert(((kv *)(region->data + 10))->v == tst4->v4 && "data mismatch");
 
+      assert(memreg_alloced_size(tst4) == sizeof(kv2) &&
+             "unexpected alloced size");
+
       // tst5
       assert(*(uint32_t *)(region->data + 11) == sizeof(kv2) &&
              "mismatch size");
@@ -2243,6 +2252,9 @@ void ds_memreg(int argc, char **argv) {
 
       assert(((kv *)(region->data + 15))->k == tst5->k4 && "data mismatch");
       assert(((kv *)(region->data + 15))->v == tst5->v4 && "data mismatch");
+
+      assert(memreg_alloced_size(tst5) == sizeof(kv2) &&
+             "unexpected alloced size");
 
       region = memreg_delete(region);
 

@@ -43,6 +43,9 @@ void memreg_zero_subset(MemReg *region, int offset, uint32_t size);
 // unless current region doesn't have enough to store data
 void *memreg_alloc(MemReg *region, uint32_t data_size);
 
+// memreg_alloced_size returns alloced size for `data`
+uint32_t memreg_alloced_size(void *data);
+
 // memreg_clear decrements the ref count and if it reaches zero, clears the
 // memory region, so it could be reused.
 void memreg_clear(MemReg *region, void *data, uint32_t data_size);
@@ -134,6 +137,10 @@ void *memreg_alloc(MemReg *region, uint32_t data_size) {
   }
 
   return memreg_alloc(region->next, data_size);
+}
+
+uint32_t memreg_alloced_size(void *data) {
+  return *(uint32_t *)(data - sizeof(uintptr_t));
 }
 
 void memreg_clear(MemReg *region, void *data, uint32_t data_size) {
