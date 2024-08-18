@@ -2262,6 +2262,49 @@ void ds_memreg(int argc, char **argv) {
     }
   }
 
+  char *cse = "memreg_zeroing";
+  if (strcmp(run, cse) == 0 || strcmp(run, "all") == 0 || strlen(run) == 0) {
+    printf("---- %s\n", cse);
+
+    size_t single_kv_in_region_size =
+        (sizeof(kv2) + sizeof(uintptr_t) - 1) / sizeof(uintptr_t) +
+        1; // +1 for data_size ptr
+    size_t kv_count = 3;
+
+    int cap = kv_count * single_kv_in_region_size;
+    MEMREG_CAPACITY = cap;
+    MemReg *region = memreg_create();
+    assert(region != NULL && "unexpected NULL");
+
+    kv2 *tmps[kv_count];
+    for (int i = 0; i < kv_count; ++i) {
+      kv2 *tmp = memreg_alloc(region, 1 * sizeof(kv2));
+      tmp->k1 = i + 1;
+      tmp->v1 = i + 1;
+      tmp->k2 = i + 1;
+      tmp->v2 = i + 1;
+      tmp->k3 = i + 1;
+      tmp->v3 = i + 1;
+      tmp->k4 = i + 1;
+      tmp->v4 = i + 1;
+      tmps[i] = tmp;
+    }
+
+    for (int i = 0; i < cap; ++i) {
+      assert((uintptr_t *)(region->data + i) != NULL && "unexpected NULL-ptr");
+    }
+
+    memreg_dump(region);
+
+    // subset zero
+    memreg_zero_data(region, tmps[1]);
+    memreg_dump(region);
+
+    region = memreg_delete(region);
+
+    printf("-- %s: ok\n", cse);
+  }
+
   return;
 }
 #endif // MEMREG
@@ -2481,7 +2524,8 @@ void utils_lex() {
       "test-test"
       "\n\t - ints 0 1 12 -12 -0 -12 12.12 12_12 12-12"
       "\n\t - chars a b c ab"
-      "\n\t - strings \"test\" \"test test test\" \"test-test\" \"test_test\" "
+      "\n\t - strings \"test\" \"test test test\" \"test-test\" "
+      "\"test_test\" "
       "'test' 't' '1' "
       "\n";
 

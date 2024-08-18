@@ -33,10 +33,10 @@ MemReg *memreg_create();
 void *memreg_delete(MemReg *region);
 
 // memreg_zero zeros the given region
-void memreg_zero_data(MemReg *region);
+void memreg_zero(MemReg *region);
 
-// memreg_zero_subset zeros `size` bytes from `offset`
-void memreg_zero_subset(MemReg *region, int offset, uint32_t size);
+// memreg_zero_data zeros `data` in `region`
+void *memreg_zero_data(MemReg *region, void *data);
 
 // memreg_alloc allocates memory from region
 // doesn't allocate additional memory,
@@ -69,16 +69,33 @@ void memreg_dump(MemReg *region);
 #include <unistd.h>
 // #include <pthread.h> // TODO: add concurrency safety
 
-void memreg_zero_data(MemReg *region) {
+uint32_t memreg_norm(uint32_t size) {
+  if (size == 0) {
+    return 0;
+  }
+  return (size + sizeof(uintptr_t) - 1) / sizeof(uintptr_t);
+}
+
+void memreg_zero(MemReg *region) {
   for (int i = 0; i < region->capacity; ++i) {
     region->data[i] = 0;
   }
 }
 
-void memreg_zero_subset(MemReg *region, int offset, uint32_t size) {
-  for (int i = offset; i < offset + size && i < region->capacity; ++i) {
+void *memreg_zero_data(MemReg *region, void *data) {
+  if (data == NULL) {
+    return NULL;
+  }
+  uint32_t size = memreg_alloced_size(data);
+  uint32_t size_norm = memreg_norm(size);
+  uint32_t offs = memreg_norm((uintptr_t *)data - region->data);
+
+  for (int i = offs; i < offs + size_norm; ++i) {
     region->data[i] = 0;
   }
+  region->data[offs - 1] = 0;
+
+  return NULL;
 }
 
 MemReg *memreg_create() {
@@ -91,7 +108,7 @@ MemReg *memreg_create() {
   if (region == MAP_FAILED) {
     return NULL;
   }
-  memreg_zero_data(region);
+  memreg_zero(region);
   region->next = NULL;
   region->capacity = MEMREG_CAPACITY;
   region->offset = 0;
@@ -112,9 +129,10 @@ void *memreg_delete(MemReg *region) {
 }
 
 void *memreg_alloc(MemReg *region, uint32_t data_size) {
-
-  uint32_t data_size_norm =
-      (data_size + sizeof(uintptr_t) - 1) / sizeof(uintptr_t);
+  if (region == NULL) {
+    return NULL;
+  }
+  uint32_t data_size_norm = memreg_norm(data_size);
 
   if (region->offset + data_size_norm + 1 <=
       region->capacity) { // TODO: store len and then data
@@ -140,10 +158,14 @@ void *memreg_alloc(MemReg *region, uint32_t data_size) {
 }
 
 uint32_t memreg_alloced_size(void *data) {
+  if (data == NULL) {
+    return 0;
+  }
   return *(uint32_t *)(data - sizeof(uintptr_t));
 }
 
 void memreg_clear(MemReg *region, void *data, uint32_t data_size) {
+
   int offs_in_reg;
   for (; region != NULL &&
          (offs_in_reg =
@@ -158,10 +180,10 @@ void memreg_clear(MemReg *region, void *data, uint32_t data_size) {
   }
 
   region->ref_count -= 1;
-  memreg_zero_subset(region, offs_in_reg, data_size);
+  memreg_zero_data(region, region->data + offs_in_reg);
 
   if (region->ref_count == 0) {
-    memreg_zero_data(region);
+    memreg_zero(region);
     region->offset = 0;
   }
 
@@ -169,6 +191,9 @@ void memreg_clear(MemReg *region, void *data, uint32_t data_size) {
 }
 
 void str_zero(char *dest, size_t size) {
+  if (dest == NULL) {
+    return;
+  }
   for (int i = 0; i < size; ++i) {
     dest[i] = '\0';
   }
@@ -209,6 +234,9 @@ void memreg_dump(MemReg *region) {
 }
 
 size_t str_len(const char *s1) {
+  if (s1 == NULL) {
+    return 0;
+  }
   size_t len = 0;
   for (; (*s1++) != '\0';) {
     ++len;
@@ -217,6 +245,10 @@ size_t str_len(const char *s1) {
 }
 
 void memreg_print(void *data, char *fmt, int argscount, ...) {
+  if (data == NULL) {
+    printf("%p\n", NULL);
+    return;
+  }
   va_list args;
   va_start(args, argscount);
   uint32_t data_size = *(uint32_t *)(data - sizeof(uintptr_t));
