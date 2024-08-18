@@ -38,13 +38,19 @@ void memreg_zero(MemReg *region);
 // memreg_zero_data zeros `data` in `region`
 void *memreg_zero_data(MemReg *region, void *data);
 
+// memreg_norm converts data size to uintptr_t size
+uintptr_t memreg_norm(uint32_t data_size);
+
+// memreg_data_size returns size of allocated data
+uint32_t memreg_data_size(void *data);
+
+// memreg_alloced_size returns size allocated in the region
+uintptr_t memreg_alloced_size(void *data);
+
 // memreg_alloc allocates memory from region
 // doesn't allocate additional memory,
 // unless current region doesn't have enough to store data
 void *memreg_alloc(MemReg *region, uint32_t data_size);
-
-// memreg_alloced_size returns alloced size for `data`
-uint32_t memreg_alloced_size(void *data);
 
 // memreg_clear decrements the ref count and if it reaches zero, clears the
 // memory region, so it could be reused.
@@ -69,13 +75,6 @@ void memreg_dump(MemReg *region);
 #include <unistd.h>
 // #include <pthread.h> // TODO: add concurrency safety
 
-uint32_t memreg_norm(uint32_t size) {
-  if (size == 0) {
-    return 0;
-  }
-  return (size + sizeof(uintptr_t) - 1) / sizeof(uintptr_t);
-}
-
 void memreg_zero(MemReg *region) {
   for (int i = 0; i < region->capacity; ++i) {
     region->data[i] = 0;
@@ -86,11 +85,11 @@ void *memreg_zero_data(MemReg *region, void *data) {
   if (data == NULL) {
     return NULL;
   }
-  uint32_t size = memreg_alloced_size(data);
-  uint32_t size_norm = memreg_norm(size);
-  uint32_t offs = memreg_norm((uintptr_t *)data - region->data);
+  uint32_t size = memreg_data_size(data);
+  uintptr_t size_norm = memreg_alloced_size(data);
+  uintptr_t offs = (uintptr_t *)data - region->data;
 
-  for (int i = offs; i < offs + size_norm; ++i) {
+  for (uint32_t i = offs; i < offs + size_norm; ++i) {
     region->data[i] = 0;
   }
   region->data[offs - 1] = 0;
@@ -128,14 +127,33 @@ void *memreg_delete(MemReg *region) {
   return NULL;
 }
 
+uintptr_t memreg_norm(uint32_t data_size) {
+  return (data_size + sizeof(uintptr_t) - 1) / sizeof(uintptr_t);
+}
+
+uint32_t memreg_data_size(void *data) {
+  if (data == NULL) {
+    return 0;
+  }
+  return *(uint32_t *)(data - sizeof(uintptr_t));
+}
+
+uintptr_t memreg_alloced_size(void *data) {
+  if (data == NULL) {
+    return 0;
+  }
+  uint32_t data_size = memreg_data_size(data);
+  return (uintptr_t)memreg_norm(data_size);
+}
+
 void *memreg_alloc(MemReg *region, uint32_t data_size) {
   if (region == NULL) {
     return NULL;
   }
-  uint32_t data_size_norm = memreg_norm(data_size);
+  uintptr_t data_size_norm = memreg_norm(data_size);
 
   if (region->offset + data_size_norm + 1 <=
-      region->capacity) { // TODO: store len and then data
+      region->capacity) { // NOTE: +1 for data size
     uintptr_t *me = region->data + region->offset;
     region->offset += data_size_norm + 1;
     region->ref_count += 1;
@@ -147,7 +165,7 @@ void *memreg_alloc(MemReg *region, uint32_t data_size) {
   if (region->next == NULL) {
     uint32_t bu = MEMREG_CAPACITY;
     if (data_size > MEMREG_CAPACITY) {
-      MEMREG_CAPACITY = data_size;
+      MEMREG_CAPACITY = data_size + 1; // NOTE: +1 for data size
     }
     MemReg *new = memreg_create();
     region->next = new;
@@ -155,13 +173,6 @@ void *memreg_alloc(MemReg *region, uint32_t data_size) {
   }
 
   return memreg_alloc(region->next, data_size);
-}
-
-uint32_t memreg_alloced_size(void *data) {
-  if (data == NULL) {
-    return 0;
-  }
-  return *(uint32_t *)(data - sizeof(uintptr_t));
 }
 
 void memreg_clear(MemReg *region, void *data, uint32_t data_size) {
