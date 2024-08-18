@@ -38,6 +38,9 @@ void memreg_zero(MemReg *region);
 // memreg_zero_data zeros `data` in `region`
 void *memreg_zero_data(MemReg *region, void *data);
 
+// memreg_data_offset returns data's offset in region
+uint32_t memreg_data_offset(MemReg *region, void *data);
+
 // memreg_norm converts data size to uintptr_t size
 uintptr_t memreg_norm(uint32_t data_size);
 
@@ -127,6 +130,12 @@ void *memreg_delete(MemReg *region) {
   return NULL;
 }
 
+uint32_t memreg_data_offset(MemReg *region, void *data) {
+  return (
+      uint32_t)((((uintptr_t *)data - region->data) + sizeof(uintptr_t) - 1) /
+                sizeof(uintptr_t));
+}
+
 uintptr_t memreg_norm(uint32_t data_size) {
   return (data_size + sizeof(uintptr_t) - 1) / sizeof(uintptr_t);
 }
@@ -177,11 +186,10 @@ void *memreg_alloc(MemReg *region, uint32_t data_size) {
 
 void memreg_clear(MemReg *region, void *data, uint32_t data_size) {
 
-  int offs_in_reg;
-  for (; region != NULL &&
-         (offs_in_reg =
-              ((uintptr_t *)data - region->data) / sizeof(uintptr_t)) > 0 &&
-         offs_in_reg >= region->capacity;
+  uint32_t offs_in_reg;
+  for (;
+       region != NULL && (offs_in_reg = memreg_data_offset(region, data)) > 0 &&
+       offs_in_reg >= region->capacity;
        region = region->next) {
     ;
   }

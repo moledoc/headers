@@ -2194,7 +2194,7 @@ void ds_memreg(int argc, char **argv) {
       for (int i = 0; i < 32; ++i) {
         tst6[i] = 'x' - i;
       }
-      printf("tst6 data size: %lu\n", memreg_data_size(tst6));
+      printf("tst6 data size: %u\n", memreg_data_size(tst6));
       printf("tst6 alloced size: %lu\n", memreg_alloced_size(tst6));
 
       memreg_dump(region);
