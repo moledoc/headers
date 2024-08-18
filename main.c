@@ -2310,8 +2310,23 @@ void ds_memreg(int argc, char **argv) {
     memreg_dump(region);
 
     // subset zero
-    memreg_zero_data(region, tmps[1]);
+
+    int offs = memreg_data_offset(region, tmps[1]);
+    int alloced_size = memreg_alloced_size(tmps[1]);
+    tmps[1] = memreg_zero_data(region, tmps[1]);
     memreg_dump(region);
+
+    for (int i = offs - 1; i < offs + alloced_size; ++i) {
+      assert((void *)region->data[i] == NULL && "unexpected non-NULL");
+    }
+
+    // full zero
+    memreg_zero(region);
+    memreg_dump(region);
+    for (int i = 0; i < region->capacity; ++i) {
+      assert((void *)region->data[i] == NULL && "unexpected non-NULL");
+    }
+    assert(region->offset == 0 && "unexpected offset");
 
     region = memreg_delete(region);
 
