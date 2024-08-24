@@ -2196,6 +2196,8 @@ void ds_memreg(int argc, char **argv) {
       }
       printf("tst6 data size: %u\n", memreg_data_size(tst6));
       printf("tst6 alloced size: %lu\n", memreg_alloced_size(tst6));
+      printf("tst6 denormed size: %u\n",
+             memreg_denorm(memreg_alloced_size(tst6)));
 
       memreg_dump(region);
 
