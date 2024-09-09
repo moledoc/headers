@@ -135,7 +135,6 @@ uintptr_t *arena_alloc(Arena *arena, uint32_t size) {
         a = arena;
         break;
       }
-      // MAYBE: TODO: try to see if data fits to any gap
     }
     ret = arena_alloc(a, size);
     if (cur_cap != ARENA_CAP) {
