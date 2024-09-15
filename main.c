@@ -2244,7 +2244,8 @@ void utils_lex() {
       "test-test"
       "\n\t - ints 0 1 12 -12 -0 -12 12.12 12_12 12-12"
       "\n\t - chars a b c ab"
-      "\n\t - strings \"test\" \"test test test\" \"test-test\" \"test_test\" "
+      "\n\t - strings \"test\" \"test test test\" \"test-test\" "
+      "\"test_test\" "
       "'test' 't' '1' "
       "\n";
 
