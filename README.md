@@ -15,9 +15,7 @@ The header file setup is inspired by header-only library style, but does diverge
 	- [x] singly linked list `-DSINGLY_LINKED_LIST`
 	- [ ] doubly linked list `-DDOUBLY_LINKED_LIST`
 	- [ ] circular singly linked list `-DCIRCULAR_SINGLY_LINKED_LIST`
-	- [ ] circular doubly linked list `-DCIRCULAR_DOUBLY_LINKED_LIST`
-		- WIP
-		- TODO: refactor to apply
+	- [x] circular doubly linked list `-DCIRCULAR_DOUBLY_LINKED_LIST`
 	- [x] stack `-DSTACK`
 	- [x] queue `-DQUEUE`
 	- [x] map `-DMAP`
@@ -61,6 +59,8 @@ The header file setup is inspired by header-only library style, but does diverge
 
 ## Quick start
 
+NOTE: incorrect at the moment.
+
 ```sh
 clang main.c -DSINGLY_LINKED_LIST && ./a.out --run all
 clang main.c -DCIRCULAR_DOUBLY_LINKED_LIST && ./a.out --run all
@@ -76,27 +76,18 @@ clang main.c -DQUEUE && ./a.out --run all
 
 ## Notes
 
+* use arenas as allocators
+	* _create functions should return arenas;
+	* _create functions might make data structures less ergonomic atm
 * Currently refactor in progress
 	* making structs slimmer
 	* relying more on an `apply` method
 	* more unified and clearer NULL checks
 	* malloc error handling
 	* update tests to `apply` approach
+* TODO: come back to proper testing approach
 * This repo is WIP, I`ll be adding things as time goes on.
 * Main things from deprecated headers have been ported, but couple interesting ideas was left. Please see this commit `4dcd5527ab18e1d06e7d04d8523c0cbe28f3951f` to see the `depr` dir as it is the last commit (currently) containing it.
-
-## TODOs
-
-- Make main runnable, when all define flags are provided
-```sh
-clang main.c -DSINGLY_LINKED_LIST -DCIRCULAR_DOUBLY_LINKED_LIST -DMAP -DTWO_SUM -DMD5 -DLOG -DUTILS -DLEX -DSTACK -DQUEUE && ./a.out
-```
-- NOTE: the following is working, so need to look into `-DLEX`, `-DCIRCULAR_DOUBLY_LINKED_LIST`, `-DTWO_SUM`
-```sh
-clang main.c -DSINGLY_LINKED_LIST -DMAP -DMD5 -DLOG -DUTILS -DSTACK -DQUEUE && ./a.out
-```
-- NOTE: there is a memory leak according to `valgrind`, when the above command is ran - need to look into that.
-
 
 ## Author
 
