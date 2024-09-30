@@ -58,12 +58,15 @@ SLLNode *sll_append(SLLNode *cursor, void *data);
 SLLNode *sll_find(SLLNode *cursor, void *data);
 
 // sll_update replaces old_data with new_data on the first found instance
-// frees data
-// returns NULL if cursor is NULL
+// returns NULL if
+// * cursor is NULL
+// * old_data is NULL
+// * new_data is NULL
+// * old_data is not found
+// returns updated node
 SLLNode *sll_update(SLLNode *cursor, void *old_data, void *new_data);
 
-// sll_delete removes the node from the linked list
-// linked list is kept intact
+// sll_delete removes the first node with given data from the linked list
 // returns NULL if cursor is NULL
 // frees memory
 SLLNode *sll_delete(SLLNode *cursor, void *data);
@@ -178,21 +181,15 @@ SLLNode *sll_find(SLLNode *cursor, void *data) {
 }
 
 SLLNode *sll_update(SLLNode *cursor, void *old_data, void *new_data) {
-  if (cursor == NULL) {
+  if (cursor == NULL || old_data == NULL || new_data == NULL) {
+    return cursor;
+  }
+  SLLNode *cur = sll_find(cursor, old_data);
+  if (cur == NULL) {
     return NULL;
   }
-  if (old_data == NULL) {
-    return cursor;
-  }
-  if (new_data == NULL) {
-    return cursor;
-  }
-  SLLNode *cur = cursor;
-  for (; cur != NULL && !cur->cmp(cur->data, old_data); cur = cur->next) {
-    ;
-  }
   cur->data = new_data;
-  return cursor;
+  return cur;
 }
 
 SLLNode *sll_delete(SLLNode *cursor, void *data) {
@@ -233,15 +230,16 @@ SLLNode *sll_delete(SLLNode *cursor, void *data) {
 
 typedef struct CDLLNode {
   bool (*cmp)(void *, void *);
-  void (*print)(struct CDLLNode *node);
-  void (*free_data)(void *); // frees memory
   struct CDLLNode *prev;
   struct CDLLNode *next;
-  void *data;
+  void *data; // NOTE: freeing data is not handled; please handle it yourself
 } CDLLNode;
 
+// cdll_apply executes func fn to each list elements with given argument
+void cdll_apply(CDLLNode *cursor, void (*fn)(CDLLNode *, void *), void *arg);
+
 // cdll_list prints the full linked list
-void cdll_list(CDLLNode *cursor);
+void cdll_list(CDLLNode *cursor, void (*print)(CDLLNode *, void *), void *fmt);
 
 // cdll_list_len finds the linked_list length
 size_t cdll_list_len(CDLLNode *cursor);
@@ -257,15 +255,22 @@ void cdll_nodes_free(CDLLNode *cursor);
 // cdll_create prepares a new node with all the helper functions
 // returns NULL if at least one argument is not properly provided
 // allocs memory
-CDLLNode *cdll_create(bool (*cmp)(void *, void *),
-                      void (*print)(CDLLNode *node),
-                      void (*free_data)(void *data), CDLLNode *prev,
-                      CDLLNode *next, void *data);
+// returns NULL if [cm]alloc fails
+CDLLNode *cdll_create(bool (*cmp)(void *, void *), void *data);
+
+// cdll_add creates a new node at the beginning of the linked list and returns
+// that node
+// returns NULL if cursor is NULL
+// allows duplicates
+// allocs memory
+// if allocating memory fails, data is not added and errno is set (to ENOMEM)
+CDLLNode *cdll_add(CDLLNode *cursor, void *data);
 
 // cdll_append creates a new node at the end of the linked list
 // returns NULL if cursor is NULL
 // allows duplicates
 // allocs memory
+// if allocating memory fails, data is not added and errno is set (to ENOMEM)
 CDLLNode *cdll_append(CDLLNode *cursor, void *data);
 
 // cdll_find searches linked list for provided data and returns the first found
@@ -274,8 +279,12 @@ CDLLNode *cdll_append(CDLLNode *cursor, void *data);
 CDLLNode *cdll_find(CDLLNode *cursor, void *data);
 
 // cdll_update replaces old_data with new_data on the first found instance
-// frees data
-// returns NULL if cursor is NULL
+// returns NULL if
+// * cursor is NULL
+// * old_data is NULL
+// * new_data is NULL
+// * old_data is not found
+// returns updated node
 CDLLNode *cdll_update(CDLLNode *cursor, void *old_data, void *new_data);
 
 // cdll_delete removes the node from the linked list
@@ -293,51 +302,44 @@ CDLLNode *cdll_delete(CDLLNode *cursor, void *data);
 
 #include <stdlib.h>
 
-void cdll_list(CDLLNode *cursor) {
-  if (!cursor) {
-    printf("-> %p\n", (void *)cursor);
-    return;
+void cdll_apply(CDLLNode *cursor, void (*fn)(CDLLNode *, void *), void *arg) {
+  for (CDLLNode *begin = cursor; cursor != NULL; cursor = cursor->next) {
+    (*fn)(cursor, arg);
+    if (cursor->next == begin) {
+      break;
+    }
   }
-  CDLLNode *cur = cursor;
-  printf("-> ");
-  cur->print(cur);
-  for (cur = cur->next; cur && cur != cursor; cur = cur->next) {
-    printf("-> ");
-    cur->print(cur);
-  }
+}
+
+void cdll_list(CDLLNode *cursor, void (*print)(CDLLNode *, void *), void *fmt) {
+  cdll_apply(cursor, print, fmt);
+  return;
+}
+
+void cdll_list_count(CDLLNode *cursor, void *count) {
+  ++(*(int *)count);
   return;
 }
 
 size_t cdll_list_len(CDLLNode *cursor) {
-  if (!cursor) {
-    return 0;
-  }
-  CDLLNode *cur = cursor;
-  cur = cur->next;
-  for (size_t i = 1; cur; ++i, cur = cur->next) {
-    if (cur == cursor) {
-      return i;
-    }
-  }
-  return 0;
+  int count = 0;
+  cdll_apply(cursor, cdll_list_count, (void *)&count);
+  return count;
 }
 
 CDLLNode *cdll_node_free(CDLLNode *cursor) {
-  if (!cursor) {
+  if (cursor == NULL) {
     return NULL;
   }
-  // comment in for logging: printf("freeing (%p)\n", cursor);
   CDLLNode *me = cursor;
-  if (me->prev) {
-    me->prev->next = NULL;
-  }
-  me->prev = NULL;
   cursor = cursor->next;
-  me->free_data(me->data);
-  free(me);
-  if (cursor) {
-    cursor->prev = NULL;
+  me->prev->next = me->next;
+  me->next->prev = me->prev;
+  if (me == cursor) {
+    free(me);
+    return NULL;
   }
+  free(me);
   return cursor;
 }
 
@@ -348,67 +350,54 @@ void cdll_nodes_free(CDLLNode *cursor) {
   return;
 }
 
-CDLLNode *cdll_create(bool (*cmp)(void *, void *),
-                      void (*print)(CDLLNode *node),
-                      void (*free_data)(void *data), CDLLNode *prev,
-                      CDLLNode *next, void *data) {
-  if (!cmp || !print || !free_data || !data) {
+CDLLNode *cdll_create(bool (*cmp)(void *, void *), void *data) {
+  if (cmp == NULL || data == NULL) {
     return NULL;
   }
   CDLLNode *new = calloc(1, sizeof(CDLLNode));
-  if (!prev) {
-    prev = new;
-  }
-  if (!next) {
-    next = new;
+  if (new == NULL) { // NOTE: calloc failed, return gracefully
+    return NULL;
   }
   new->cmp = cmp;
-  new->print = print;
-  new->free_data = free_data;
   new->data = data;
-  new->next = next;
-  new->prev = prev;
+  new->next = new;
+  new->prev = new;
+  return new;
+}
+
+CDLLNode *cdll_add(CDLLNode *cursor, void *data) {
+  if (cursor == NULL) {
+    return NULL;
+  }
+  if (data == NULL) {
+    return cursor;
+  }
+  CDLLNode *new = cdll_create(cursor->cmp, data);
+  if (new == NULL) { // NOTE: alloc failed, check errno (ENOMEM)
+    return cursor;
+  }
+  new->next = cursor;
+  new->prev = cursor->prev;
+  cursor->prev->next = new;
+  cursor->prev = new;
   return new;
 }
 
 CDLLNode *cdll_append(CDLLNode *cursor, void *data) {
-  if (!cursor || !cursor->prev) {
-    return NULL;
-  }
-
-  CDLLNode *new = cdll_create(cursor->cmp, cursor->print, cursor->free_data,
-                              cursor->prev, cursor, data);
-  if (cursor->next == cursor) { // NOTE: if is 1 elem list
-    cursor->next = new;
-  }
-  cursor->prev->next = new;
-  cursor->prev = new;
+  cdll_add(cursor, data);
   return cursor;
 }
 
-#ifdef CDLL_TESTS
-int iters = 0;
-#endif // CDLL_TESTS
-
-// cdll_find searches linked list for provided data and returns the first found
-// instance
-// returns NULL if cursor is NULL
 CDLLNode *cdll_find(CDLLNode *cursor, void *data) {
-  if (!cursor) {
+  if (cursor == NULL) {
     return NULL;
   }
-#ifdef CDLL_TESTS
-  iters = 0;
-#endif // CDLL_TESTS
   if (cursor->cmp(cursor->data, data)) {
     return cursor;
   }
   CDLLNode *prev = cursor->prev;
   CDLLNode *next = cursor->next;
   for (; next != cursor && prev != cursor;) {
-#ifdef CDLL_TESTS
-    ++iters;
-#endif // CDLL_TESTS
     if (next->cmp(next->data, data)) {
       return next;
     }
@@ -424,18 +413,31 @@ CDLLNode *cdll_find(CDLLNode *cursor, void *data) {
   return NULL;
 }
 
-// TODO: below this point
+CDLLNode *cdll_update(CDLLNode *cursor, void *old_data, void *new_data) {
+  if (cursor == NULL || old_data == NULL || new_data == NULL) {
+    return cursor;
+  }
+  CDLLNode *cur = cdll_find(cursor, old_data);
+  if (cur == NULL) {
+    return NULL;
+  }
+  cur->data = new_data;
+  return cur;
+}
 
-// cdll_update replaces old_data with new_data on the first found instance
-// frees data
-// returns NULL if cursor is NULL
-CDLLNode *cdll_update(CDLLNode *cursor, void *old_data, void *new_data);
-
-// cdll_delete removes the node from the linked list
-// linked list is kept intact
-// returns NULL if cursor is NULL
-// frees memory
-CDLLNode *cdll_delete(CDLLNode *cursor, void *data);
+CDLLNode *cdll_delete(CDLLNode *cursor, void *data) {
+  if (cursor == NULL || data == NULL) {
+    return cursor;
+  }
+  CDLLNode *me = cdll_find(cursor, data);
+  if (me == NULL) {
+    return cursor;
+  }
+  me->prev->next = me->next;
+  me->next->prev = me->prev;
+  free(me);
+  return cursor;
+}
 
 #endif // CIRCULAR_DOUBLY_LINKED_LIST // IMPLEMENTATION
 // }
