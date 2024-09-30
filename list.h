@@ -456,18 +456,8 @@ typedef struct MapKeyValue {
   struct MapKeyValue *next;
 } MapKeyValue;
 
-// MapKeyType describes which key types are supported by this Map implementation
-enum MapKeyType {
-  MapKeyInt,
-  MapKeyStr,
-  MapKeyCount,
-};
-
 typedef struct {
-  int (*hash)(enum MapKeyType key_type, void *key, size_t cap);
-  enum MapKeyType key_type;
-  void (*print_value)(void *value);
-  void (*free_value)(void *value);
+  int (*hash)(void *key, size_t key_len, size_t cap);
   MapKeyValue **kvs;
   size_t len;
   size_t cap;
@@ -491,7 +481,10 @@ enum {
 int MAP_BUCKETS_SIZE = MAP_BUCKETS_SIZE_DEFAULT;
 
 // map_hash is default hashing function
-int map_hash(enum MapKeyType key_type, void *key, size_t cap);
+int map_hash(void *key, size_t key_len, size_t cap);
+
+// map_apply executes func fn to each list elements with given argument
+void map_apply(Map *map, void (*fn)(MapKeyValue *, void *), void *arg);
 
 // map_free frees the entire map
 // frees memory
@@ -501,9 +494,7 @@ void map_free(Map *map);
 // returns NULL if at least one argument is not properly provided
 // default buckets size is MAP_BUCKETS_SIZE
 // allocs memory
-Map *map_create(int (*hash)(enum MapKeyType key_type, void *key, size_t cap),
-                enum MapKeyType key_type, void (*print_value)(void *value),
-                void (*free_value)(void *value));
+Map *map_create(int (*hash)(void *key, size_t key_len, size_t cap));
 
 // map_list prints the entire map
 void map_list(Map *map);
@@ -523,9 +514,6 @@ void *map_find(Map *map, void *key);
 // frees memory
 Map *map_delete(Map *map, void *key);
 
-// map_apply executes func fn to each list elements with given argument
-void map_apply(Map *map, void (*fn)(MapKeyValue *, void *), void *arg);
-
 // TODO: reorg - handle up- and down-sizing
 
 #endif // defined(MAP) // HEADER
@@ -537,28 +525,27 @@ void map_apply(Map *map, void (*fn)(MapKeyValue *, void *), void *arg);
 
 // TODO: reorg - handle up- and down-sizing
 
-int map_hash(enum MapKeyType key_type, void *key, size_t cap) {
-  switch (key_type) {
-  case MapKeyInt: {
-    return (*(int *)key) % cap;
+int map_hash(void *key, size_t key_len, size_t cap) {
+  char *kkey = (char *)key;
+  int h = 0;
+  for (int i = 0; i < key_len; i += 1) {
+    h += HASH_MULTIPLIER * h + (*kkey)[i];
   }
-  case MapKeyStr: {
-    char *kkey = (char *)key;
-    size_t key_len = 0;
+  if (cap == 0) {
+    cap = key_len;
+  }
+  return h % cap;
+}
 
-    int h = 0;
-    for (unsigned char *p = (unsigned char *)kkey; *p != '\0'; ++p, ++key_len) {
-      h += HASH_MULTIPLIER * h + *p;
+void map_apply(Map *map, void (*fn)(MapKeyValue *, void *), void *arg) {
+  for (int i = 0; i < map->cap; ++i) {
+    if (map->kvs[i] == NULL) {
+      continue;
     }
-    if (cap == 0) {
-      cap = key_len;
+    for (MapKeyValue *kv = map->kvs[i]; kv != NULL; kv = kv->next) {
+      (*fn)(kv, arg);
     }
-    return h % cap;
   }
-  default:
-    assert(0 && "unsupported type");
-  }
-  assert(0 && "unreachable");
 }
 
 void map_free(Map *map) {
@@ -587,31 +574,13 @@ void map_free(Map *map) {
   }
 }
 
-Map *map_create(int (*hash)(enum MapKeyType key_type, void *key, size_t cap),
-                enum MapKeyType key_type, void (*print_value)(void *value),
-                void (*free_value)(void *value)) {
-  if (!hash || !print_value || !free_value) {
-    return NULL;
-  }
-  switch (key_type) {
-  case MapKeyInt: {
-    break;
-  }
-  case MapKeyStr: {
-    break;
-  }
-  case MapKeyCount: {
-    return NULL;
-  }
-  default:
+Map *map_create(int (*hash)(void *key, size_t key_len, size_t cap)) {
+  if (hash == NULL) {
     return NULL;
   }
 
   Map *new = calloc(1, sizeof(Map));
   new->hash = hash;
-  new->key_type = key_type;
-  new->print_value = print_value;
-  new->free_value = free_value;
   new->kvs = calloc(MAP_BUCKETS_SIZE, sizeof(MapKeyValue *));
   new->len = 0;
   new->cap = MAP_BUCKETS_SIZE;
@@ -812,16 +781,6 @@ Map *map_delete(Map *map, void *key) {
   }
 
   return map;
-}
-
-// map_apply executes func fn to each list elements with given argument
-void map_apply(Map *map, void (*fn)(MapKeyValue *, void *), void *arg) {
-  for (int i = 0; i < map->cap; ++i) {
-    if (map->kvs[i] == NULL) {
-      continue;
-    }
-    (*fn)(map->kvs[i], arg);
-  }
 }
 
 #endif // defined(MAP) // IMPLEMENTATION
