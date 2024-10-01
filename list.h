@@ -468,6 +468,299 @@ CDLLNode *cdll_delete(CDLLNode *cursor, void *data) {
 // }
 
 // {
+#ifdef STACK // HEADER
+#pragma once
+
+typedef struct StackNode {
+  struct StackNode *next;
+  void *data; // NOTE: freeing data is not handled; please handle it yourself
+} StackNode;
+
+// stack_apply executes func fn on each list element with given argument.
+void stack_apply(StackNode *cursor, void (*fn)(StackNode *, void *), void *arg);
+
+// stack_list prints the full stack.
+void stack_list(StackNode *cursor, void (*print)(StackNode *, void *),
+                void *fmt);
+
+// stack_list_len finds the queue length.
+size_t stack_list_len(StackNode *cursor);
+
+// stack_free_node frees the current node and returns ptr to the next node.
+// frees memory.
+StackNode *stack_node_free(StackNode *cursor);
+
+// stack_free_nodes frees the entire stack.
+// frees memory.
+void *stack_nodes_free(StackNode *cursor);
+
+// stack_create creates stack.
+// if NULL data is provided, stack_push can be used to populate stack->data.
+// allocs memory.
+// returns NULL if [cm]alloc fails and errno is set (to ENOMEM).
+StackNode *stack_create(void *data);
+
+// stack_push pushes data to top of stack.
+// returns NULL if cursor is NULL.
+// allocs memory.
+// if allocating memory fails, data is not added and errno is set (to ENOMEM).
+StackNode *stack_push(StackNode *cursor, void *data);
+
+// stack_pop pops the top of stack.
+// returns NULL if cursor is NULL.
+// frees memory.
+// returns new head, data is returned through `out`.
+// if NULL `out` is provided, then no data is popped, current cursor is
+// returned.
+StackNode *stack_pop(StackNode *cursor, void **out);
+
+#endif // STACK // HEADER
+
+// }
+
+// {
+#ifdef STACK // IMPLEMENTATION
+
+#include <stdlib.h>
+
+void stack_apply(StackNode *cursor, void (*fn)(StackNode *, void *),
+                 void *arg) {
+  for (; cursor != NULL; cursor = cursor->next) {
+    (*fn)(cursor, arg);
+  }
+}
+
+void stack_list(StackNode *cursor, void (*print)(StackNode *, void *),
+                void *fmt) {
+  stack_apply(cursor, print, fmt);
+  return;
+}
+
+void stack_list_count(StackNode *cursor, void *count) {
+  ++(*(int *)count);
+  return;
+}
+
+size_t stack_list_len(StackNode *cursor) {
+  int count = 0;
+  stack_apply(cursor, stack_list_count, (void *)&count);
+  return count;
+}
+
+StackNode *stack_node_free(StackNode *cursor) {
+  if (!cursor) {
+    return NULL;
+  }
+  StackNode *me = cursor;
+  cursor = cursor->next;
+  free(me);
+  return cursor;
+}
+
+void *stack_nodes_free(StackNode *cursor) {
+  for (; cursor != NULL;) {
+    cursor = stack_node_free(cursor);
+  }
+  return NULL;
+}
+
+StackNode *stack_create(void *data) {
+  if (data == NULL) {
+    return NULL;
+  }
+  StackNode *new = calloc(1, sizeof(StackNode));
+  if (new == NULL) { // NOTE: calloc failed, return gracefully
+    return NULL;
+  }
+  new->data = data;
+  return new;
+}
+
+StackNode *stack_push(StackNode *cursor, void *data) {
+  if (cursor == NULL) {
+    return NULL;
+  }
+  if (data == NULL) {
+    return cursor;
+  }
+  StackNode *new;
+  if (cursor->data == NULL) {
+    cursor->data = data;
+    new = cursor;
+  } else {
+    new = stack_create(data);
+    if (new == NULL) { // NOTE: alloc failed, check errno (ENOMEM)
+      return cursor;
+    }
+    new->next = cursor;
+  }
+  return new;
+}
+
+StackNode *stack_pop(StackNode *cursor, void **out) {
+  if (cursor == NULL) {
+    return NULL;
+  }
+  if (out == NULL) {
+    return cursor;
+  }
+  StackNode *new = cursor->next;
+  *out = cursor->data;
+  stack_node_free(cursor);
+  return new;
+}
+
+#endif // STACK // IMPLEMENTATION
+
+// }
+
+// {
+#ifdef QUEUE // HEADER
+#pragma once
+
+typedef struct QueueNode {
+  struct QueueNode *next;
+  void *data; // freeing of data is left for the user
+} QueueNode;
+
+// queue_list prints the full queue.
+void queue_list(QueueNode *cursor, void (*print)(QueueNode *, void *),
+                void *fmt);
+
+// queue_list_len finds the queue length.
+size_t queue_list_len(QueueNode *cursor);
+
+// queue_free_node frees the current node and returns the next linked list
+// element.
+// frees memory.
+QueueNode *queue_node_free(QueueNode *cursor);
+
+// queue_free_nodes frees the entire queue.
+// frees memory.
+void *queue_nodes_free(QueueNode *cursor);
+
+// queue_create creates queue.
+// if NULL data is provided, queue_push can be used to populate queue->data.
+// allocs memory.
+// returns NULL if [cm]alloc fails, data is not added and errno is set (to
+// ENOMEM).
+QueueNode *queue_create(void *data);
+
+// queue_push pushes data to end of queue.
+// returns NULL if cursor or data is NULL.
+// allocs memory.
+// if allocating memory fails, data is not added and errno is set (to ENOMEM).
+QueueNode *queue_push(QueueNode *cursor, void *data);
+
+// queue_pop pops the head of queue.
+// returns NULL if cursor is NULL.
+// frees memory.
+// returns new head, data is returned through `out`.
+// if NULL `out` provided, then no data is popped, current cursor is returned.
+QueueNode *queue_pop(QueueNode *cursor, void **out);
+
+#endif // QUEUE // HEADER
+
+// }
+
+// {
+#ifdef QUEUE // IMPLEMENTATION
+
+#include <stdlib.h>
+
+void queue_apply(QueueNode *cursor, void (*fn)(QueueNode *, void *),
+                 void *arg) {
+  for (; cursor != NULL; cursor = cursor->next) {
+    (*fn)(cursor, arg);
+  }
+}
+
+void queue_list(QueueNode *cursor, void (*print)(QueueNode *, void *),
+                void *fmt) {
+  queue_apply(cursor, print, fmt);
+  return;
+}
+
+void queue_list_count(QueueNode *cursor, void *count) {
+  ++(*(int *)count);
+  return;
+}
+
+size_t queue_list_len(QueueNode *cursor) {
+  int count = 0;
+  queue_apply(cursor, queue_list_count, (void *)&count);
+  return count;
+}
+
+QueueNode *queue_node_free(QueueNode *cursor) {
+  if (cursor == NULL) {
+    return NULL;
+  }
+  QueueNode *me = cursor;
+  cursor = cursor->next;
+  free(me);
+  return cursor;
+}
+
+void *queue_nodes_free(QueueNode *cursor) {
+  for (; cursor != NULL;) {
+    cursor = queue_node_free(cursor);
+  }
+  return NULL;
+}
+
+QueueNode *queue_create(void *data) {
+  if (data == NULL) {
+    return NULL;
+  }
+  QueueNode *new = calloc(1, sizeof(QueueNode));
+  if (new == NULL) { // NOTE: calloc failed, return gracefully
+    return NULL;
+  }
+  new->data = data;
+  return new;
+}
+
+QueueNode *queue_push(QueueNode *cursor, void *data) {
+  if (cursor == NULL) {
+    return NULL;
+  }
+  if (data == NULL) {
+    return cursor;
+  }
+  if (cursor->data == NULL) {
+    cursor->data = data;
+  } else {
+    QueueNode *new = queue_create(data);
+    if (new == NULL) { // NOTE: alloc failed, check errno (ENOMEM)
+      return cursor;
+    }
+    QueueNode *cur = cursor;
+    for (; cur->next; cur = cur->next) {
+      ;
+    }
+    cur->next = new;
+  }
+  return cursor;
+}
+
+QueueNode *queue_pop(QueueNode *cursor, void **out) {
+  if (cursor == NULL) {
+    return NULL;
+  }
+  if (out == NULL) {
+    return cursor;
+  }
+  QueueNode *new = cursor->next;
+  *out = cursor->data;
+  queue_node_free(cursor);
+  return new;
+}
+
+#endif // QUEUE // IMPLEMENTATION
+
+// }
+// {
 #if defined(MAP) // HEADER
 #pragma once
 
@@ -850,298 +1143,4 @@ void map_apply(Map *map, void (*fn)(MapKeyValue *, void *), void *arg) {
 }
 
 #endif // defined(MAP) // IMPLEMENTATION
-// }
-
-// {
-#ifdef STACK // HEADER
-#pragma once
-
-typedef struct StackNode {
-  struct StackNode *next;
-  void *data; // NOTE: freeing data is not handled; please handle it yourself
-} StackNode;
-
-// stack_apply executes func fn on each list element with given argument.
-void stack_apply(StackNode *cursor, void (*fn)(StackNode *, void *), void *arg);
-
-// stack_list prints the full stack.
-void stack_list(StackNode *cursor, void (*print)(StackNode *, void *),
-                void *fmt);
-
-// stack_list_len finds the queue length.
-size_t stack_list_len(StackNode *cursor);
-
-// stack_free_node frees the current node and returns ptr to the next node.
-// frees memory.
-StackNode *stack_node_free(StackNode *cursor);
-
-// stack_free_nodes frees the entire stack.
-// frees memory.
-void *stack_nodes_free(StackNode *cursor);
-
-// stack_create creates stack.
-// if NULL data is provided, stack_push can be used to populate stack->data.
-// allocs memory.
-// returns NULL if [cm]alloc fails and errno is set (to ENOMEM).
-StackNode *stack_create(void *data);
-
-// stack_push pushes data to top of stack.
-// returns NULL if cursor is NULL.
-// allocs memory.
-// if allocating memory fails, data is not added and errno is set (to ENOMEM).
-StackNode *stack_push(StackNode *cursor, void *data);
-
-// stack_pop pops the top of stack.
-// returns NULL if cursor is NULL.
-// frees memory.
-// returns new head, data is returned through `out`.
-// if NULL `out` is provided, then no data is popped, current cursor is
-// returned.
-StackNode *stack_pop(StackNode *cursor, void **out);
-
-#endif // STACK // HEADER
-
-// }
-
-// {
-#ifdef STACK // IMPLEMENTATION
-
-#include <stdlib.h>
-
-void stack_apply(StackNode *cursor, void (*fn)(StackNode *, void *),
-                 void *arg) {
-  for (; cursor != NULL; cursor = cursor->next) {
-    (*fn)(cursor, arg);
-  }
-}
-
-void stack_list(StackNode *cursor, void (*print)(StackNode *, void *),
-                void *fmt) {
-  stack_apply(cursor, print, fmt);
-  return;
-}
-
-void stack_list_count(StackNode *cursor, void *count) {
-  ++(*(int *)count);
-  return;
-}
-
-size_t stack_list_len(StackNode *cursor) {
-  int count = 0;
-  stack_apply(cursor, stack_list_count, (void *)&count);
-  return count;
-}
-
-StackNode *stack_node_free(StackNode *cursor) {
-  if (!cursor) {
-    return NULL;
-  }
-  StackNode *me = cursor;
-  cursor = cursor->next;
-  free(me);
-  return cursor;
-}
-
-void *stack_nodes_free(StackNode *cursor) {
-  for (; cursor != NULL;) {
-    cursor = stack_node_free(cursor);
-  }
-  return NULL;
-}
-
-StackNode *stack_create(void *data) {
-  if (data == NULL) {
-    return NULL;
-  }
-  StackNode *new = calloc(1, sizeof(StackNode));
-  if (new == NULL) { // NOTE: calloc failed, return gracefully
-    return NULL;
-  }
-  new->data = data;
-  return new;
-}
-
-StackNode *stack_push(StackNode *cursor, void *data) {
-  if (cursor == NULL) {
-    return NULL;
-  }
-  if (data == NULL) {
-    return cursor;
-  }
-  StackNode *new;
-  if (cursor->data == NULL) {
-    cursor->data = data;
-    new = cursor;
-  } else {
-    new = stack_create(data);
-    if (new == NULL) { // NOTE: alloc failed, check errno (ENOMEM)
-      return cursor;
-    }
-    new->next = cursor;
-  }
-  return new;
-}
-
-StackNode *stack_pop(StackNode *cursor, void **out) {
-  if (cursor == NULL) {
-    return NULL;
-  }
-  if (out == NULL) {
-    return cursor;
-  }
-  StackNode *new = cursor->next;
-  *out = cursor->data;
-  stack_node_free(cursor);
-  return new;
-}
-
-#endif // STACK // IMPLEMENTATION
-
-// }
-
-// {
-#ifdef QUEUE // HEADER
-#pragma once
-
-typedef struct QueueNode {
-  struct QueueNode *next;
-  void *data; // freeing of data is left for the user
-} QueueNode;
-
-// queue_list prints the full queue.
-void queue_list(QueueNode *cursor, void (*print)(QueueNode *, void *),
-                void *fmt);
-
-// queue_list_len finds the queue length.
-size_t queue_list_len(QueueNode *cursor);
-
-// queue_free_node frees the current node and returns the next linked list
-// element.
-// frees memory.
-QueueNode *queue_node_free(QueueNode *cursor);
-
-// queue_free_nodes frees the entire queue.
-// frees memory.
-void *queue_nodes_free(QueueNode *cursor);
-
-// queue_create creates queue.
-// if NULL data is provided, queue_push can be used to populate queue->data.
-// allocs memory.
-// returns NULL if [cm]alloc fails, data is not added and errno is set (to
-// ENOMEM).
-QueueNode *queue_create(void *data);
-
-// queue_push pushes data to end of queue.
-// returns NULL if cursor or data is NULL.
-// allocs memory.
-// if allocating memory fails, data is not added and errno is set (to ENOMEM).
-QueueNode *queue_push(QueueNode *cursor, void *data);
-
-// queue_pop pops the head of queue.
-// returns NULL if cursor is NULL.
-// frees memory.
-// returns new head, data is returned through `out`.
-// if NULL `out` provided, then no data is popped, current cursor is returned.
-QueueNode *queue_pop(QueueNode *cursor, void **out);
-
-#endif // QUEUE // HEADER
-
-// }
-
-// {
-#ifdef QUEUE // IMPLEMENTATION
-
-#include <stdlib.h>
-
-void queue_apply(QueueNode *cursor, void (*fn)(QueueNode *, void *),
-                 void *arg) {
-  for (; cursor != NULL; cursor = cursor->next) {
-    (*fn)(cursor, arg);
-  }
-}
-
-void queue_list(QueueNode *cursor, void (*print)(QueueNode *, void *),
-                void *fmt) {
-  queue_apply(cursor, print, fmt);
-  return;
-}
-
-void queue_list_count(QueueNode *cursor, void *count) {
-  ++(*(int *)count);
-  return;
-}
-
-size_t queue_list_len(QueueNode *cursor) {
-  int count = 0;
-  queue_apply(cursor, queue_list_count, (void *)&count);
-  return count;
-}
-
-QueueNode *queue_node_free(QueueNode *cursor) {
-  if (cursor == NULL) {
-    return NULL;
-  }
-  QueueNode *me = cursor;
-  cursor = cursor->next;
-  free(me);
-  return cursor;
-}
-
-void *queue_nodes_free(QueueNode *cursor) {
-  for (; cursor != NULL;) {
-    cursor = queue_node_free(cursor);
-  }
-  return NULL;
-}
-
-QueueNode *queue_create(void *data) {
-  if (data == NULL) {
-    return NULL;
-  }
-  QueueNode *new = calloc(1, sizeof(QueueNode));
-  if (new == NULL) { // NOTE: calloc failed, return gracefully
-    return NULL;
-  }
-  new->data = data;
-  return new;
-}
-
-QueueNode *queue_push(QueueNode *cursor, void *data) {
-  if (cursor == NULL) {
-    return NULL;
-  }
-  if (data == NULL) {
-    return cursor;
-  }
-  if (cursor->data == NULL) {
-    cursor->data = data;
-  } else {
-    QueueNode *new = queue_create(data);
-    if (new == NULL) { // NOTE: alloc failed, check errno (ENOMEM)
-      return cursor;
-    }
-    QueueNode *cur = cursor;
-    for (; cur->next; cur = cur->next) {
-      ;
-    }
-    cur->next = new;
-  }
-  return cursor;
-}
-
-QueueNode *queue_pop(QueueNode *cursor, void **out) {
-  if (cursor == NULL) {
-    return NULL;
-  }
-  if (out == NULL) {
-    return cursor;
-  }
-  QueueNode *new = cursor->next;
-  *out = cursor->data;
-  queue_node_free(cursor);
-  return new;
-}
-
-#endif // QUEUE // IMPLEMENTATION
-
 // }
