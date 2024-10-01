@@ -450,6 +450,10 @@ CDLLNode *cdll_delete(CDLLNode *cursor, void *data) {
 #include <stdlib.h>
 #include <string.h>
 
+#define ARENA
+#include "arena.h"
+#undef ARENA
+
 typedef struct MapKeyValue {
   void *key;
   void *value;
@@ -458,6 +462,7 @@ typedef struct MapKeyValue {
 
 typedef struct {
   int (*hash)(void *key, size_t key_len, size_t cap);
+  Arena *_arena;
   MapKeyValue **kvs;
   size_t len;
   size_t cap;
@@ -549,7 +554,7 @@ void map_apply(Map *map, void (*fn)(MapKeyValue *, void *), void *arg) {
 }
 
 void map_free(Map *map) {
-  if (!map) {
+  if (map == NULL) {
     return;
   }
   for (int i = 0; i < map->cap; ++i) {
@@ -558,7 +563,6 @@ void map_free(Map *map) {
     }
 
     for (MapKeyValue *cur = map->kvs[i]; cur;) {
-      map->free_value(map->kvs[i]->value);
       MapKeyValue *me = cur;
       cur = cur->next;
       free(me);
@@ -582,57 +586,15 @@ Map *map_create(int (*hash)(void *key, size_t key_len, size_t cap)) {
   Map *new = calloc(1, sizeof(Map));
   new->hash = hash;
   new->kvs = calloc(MAP_BUCKETS_SIZE, sizeof(MapKeyValue *));
+  _arena = arena_create();
   new->len = 0;
   new->cap = MAP_BUCKETS_SIZE;
   return new;
 }
 
-void map_list(Map *map) {
-  if (!map) {
-    printf("[ (nil) ]\n");
-    return;
-  }
-  printf("[ ");
-  switch (map->key_type) {
-  case MapKeyInt: {
-    for (int i = 0; i < map->cap; ++i) {
-      if (!map->kvs[i]) {
-        continue;
-      }
-      printf("%d:", *(int *)map->kvs[i]->key);
-      map->print_value(map->kvs[i]->value);
-      putchar(' ');
-
-      for (MapKeyValue *cur = map->kvs[i]->next; cur; cur = cur->next) {
-        printf("%d:", *(int *)cur->key);
-        map->print_value(cur->value);
-        putchar(' ');
-      }
-    }
-    break;
-  case MapKeyStr: {
-    for (int i = 0; i < map->cap; ++i) {
-      if (!map->kvs[i]) {
-        continue;
-      }
-      printf("%s:", (char *)map->kvs[i]->key);
-      map->print_value(map->kvs[i]->value);
-      putchar(' ');
-
-      // NOTE: handle printing
-      for (MapKeyValue *cur = map->kvs[i]->next; cur; cur = cur->next) {
-        printf("%s:", (char *)cur->key);
-        map->print_value(cur->value);
-        putchar(' ');
-      }
-    }
-  } break;
-  default:
-    assert(0 && "unsupported type");
-    break;
-  }
-  }
-  printf("]\n");
+void map_list(Map *map, void (*print)(Map *, void *), void *fmt) {
+  map_apply(cursor, print, fmt);
+  return;
 }
 
 Map *map_insert(Map *map, void *key, void *value) {
@@ -642,14 +604,14 @@ Map *map_insert(Map *map, void *key, void *value) {
 
   int idx = map->hash(map->key_type, key, map->cap);
 
-  MapKeyValue *kv = calloc(1, sizeof(MapKeyValue));
+  MapKeyValue *kv = arena_alloc(map->_arena, sizeof(MapKeyValue));
   kv->key = key;
   kv->value = value;
   kv->next = NULL;
 
   if (map->kvs[idx] == NULL) {
     map->kvs[idx] = kv;
-    ++map->len;
+    map->len += 1;
     return map;
   }
 
