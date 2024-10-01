@@ -63,7 +63,7 @@ void map_free(Map *map);
 Map *map_create(int (*hash)(void *key, size_t key_len, size_t cap));
 
 // map_list prints the entire map.
-void map_list(Map *map);
+void map_list(Map *map, void (*print)(MapKeyValue *, void *), void *fmt);
 
 // map_insert adds/updates `value` to/in `map` with `key`.
 // differently:
@@ -108,11 +108,68 @@ bool _cmp(void *k1, size_t k1_len, void *k2, size_t k2_len) {
   return 1;
 }
 
+enum _ReorgAction { _REORG_INC, _REORG_DEC };
+
+typedef struct {
+  size_t offset;
+  MapKeyValue **kvs;
+} _ReorgCollector;
+
+void _reorg_collection(MapKeyValue *kv, void *collector) {
+  ((_ReorgCollector *)collector)->kvs[((_ReorgCollector *)collector)->offset] =
+      kv;
+  ((_ReorgCollector *)collector)->offset += 1;
+  return;
+}
+
+_ReorgCollector *_reorg_extract_kvs(Map *map) {
+  _ReorgCollector *collector = calloc(1, sizeof(_ReorgCollector));
+  collector->kvs = calloc(map->len, sizeof(MapKeyValue *));
+  map_apply(map, _reorg_collection, (void *)collector);
+  return collector;
+}
+
+void _recompute_idx(Map *map, MapKeyValue **kvs) {
+  for (int i = 0; i < map->len; i += 1) {
+    map_insert(map, kvs[i]->key, kvs[i]->key_len, kvs[i]->value);
+  }
+}
+
+void _reorg(Map *map, size_t factor, enum _ReorgAction action) {
+  if (map == NULL || factor <= 0) {
+    return;
+  }
+
+  MapKeyValue **new = calloc(factor * map->cap, sizeof(MapKeyValue *));
+
+  _ReorgCollector *collector = _reorg_extract_kvs(map);
+
+  Arena *old_arena = map->_arena;
+  ARENA_CAP = (2 + 1) * map->cap; // NOTE: with some redundancy
+  map->_arena = arena_create();
+  _recompute_idx(map, collector->kvs);
+
+  if (collector->kvs != NULL) {
+    free(collector->kvs);
+  }
+  if (collector != NULL) {
+    free(collector);
+  }
+  arena_destroy(old_arena);
+
+  // NOTE: set later, otherwise segfault in map_apply
+  if (action == _REORG_INC) {
+    map->cap = factor * map->cap;
+  } else if (action == _REORG_DEC) {
+    map->cap = map->cap / factor;
+  }
+}
+
 int map_hash(void *key, size_t key_len, size_t cap) {
-  char *kkey = (char *)key;
+  uint64_t *kkey = (uint64_t *)key;
   int h = 0;
   for (int i = 0; i < key_len; i += 1) {
-    h += HASH_MULTIPLIER * h + (*kkey)[i];
+    h += HASH_MULTIPLIER * h + kkey[i];
   }
   if (cap == 0) {
     cap = key_len;
@@ -133,14 +190,14 @@ void map_apply(Map *map, void (*fn)(MapKeyValue *, void *), void *arg) {
 
 void map_free(Map *map) {
   if (map == NULL) {
-    return NULL;
+    return;
   }
-  arena_destroy(map->_arena);
   if (map->kvs) {
     free(map->kvs);
   }
+  arena_destroy(map->_arena);
   if (map) {
-    free(map)
+    free(map);
   }
 }
 
@@ -152,59 +209,16 @@ Map *map_create(int (*hash)(void *key, size_t key_len, size_t cap)) {
   Map *new = calloc(1, sizeof(Map));
   new->hash = hash;
   new->kvs = calloc(MAP_BUCKETS_SIZE, sizeof(MapKeyValue *));
-  _arena = arena_create();
+  ARENA_CAP = (2 + 1) * MAP_BUCKETS_SIZE; // NOTE: with some redundancy
+  new->_arena = arena_create();
   new->len = 0;
   new->cap = MAP_BUCKETS_SIZE;
   return new;
 }
 
-void map_list(Map *map, void (*print)(Map *, void *), void *fmt) {
-  map_apply(cursor, print, fmt);
+void map_list(Map *map, void (*print)(MapKeyValue *, void *), void *fmt) {
+  map_apply(map, print, fmt);
   return;
-}
-
-Map *map_insert(Map *map, void *key, size_t key_len, void *value) {
-  if (map == NULL || key == NULL || key_len <= 0) {
-    return NULL;
-  }
-  int idx = map->hash(key, key_len, map->cap);
-
-  if (map->kvs[idx] == NULL) {
-
-    MapKeyValue *kv = arena_alloc(map->_arena, sizeof(MapKeyValue));
-    kv->key = key;
-    kv->key_len = key_len;
-    kv->value = value;
-    kv->next = NULL;
-
-    map->kvs[idx] = kv;
-    map->len += 1;
-    return map;
-  }
-
-  MapKeyValue *cur = map->kvs[idx];
-  MapKeyValue *prev = map->kvs[idx];
-  for (; cur != NULL; cur = cur->next) {
-    if (_cmp(cur->key, cur->key_len, key, key_len)) {
-      cur->value = value;
-      return map;
-    }
-    prev = cur;
-  }
-
-  if (cur == NULL && prev != NULL) {
-    MapKeyValue *kv = arena_alloc(map->_arena, sizeof(MapKeyValue));
-    kv->key = key;
-    kv->key_len = key_len;
-    kv->value = value;
-    kv->next = NULL;
-
-    prev->next = kv;
-    map->len += 1;
-    return map;
-  }
-
-  return map;
 }
 
 void *map_find(Map *map, void *key, size_t key_len) {
@@ -227,7 +241,59 @@ void *map_find(Map *map, void *key, size_t key_len) {
   return NULL;
 }
 
-Map *map_delete(Map *map, void *key, size_t key_len, void *value) {
+Map *map_insert(Map *map, void *key, size_t key_len, void *value) {
+  if (map == NULL || key == NULL || key_len <= 0) {
+    return NULL;
+  }
+  int idx = map->hash(key, key_len, map->cap);
+
+  if (map->kvs[idx] == NULL) {
+
+    MapKeyValue *kv =
+        (MapKeyValue *)arena_alloc(map->_arena, sizeof(MapKeyValue));
+    kv->key = key;
+    kv->key_len = key_len;
+    kv->value = value;
+    kv->next = NULL;
+
+    map->kvs[idx] = kv;
+    map->len += 1;
+    if (map->len >= map->cap * 80 / 100) {
+      _reorg(map, 2, _REORG_INC);
+    }
+    return map;
+  }
+
+  MapKeyValue *cur = map->kvs[idx];
+  MapKeyValue *prev = map->kvs[idx];
+  for (; cur != NULL; cur = cur->next) {
+    if (_cmp(cur->key, cur->key_len, key, key_len)) {
+      cur->value = value;
+      return map;
+    }
+    prev = cur;
+  }
+
+  if (cur == NULL && prev != NULL) {
+    MapKeyValue *kv =
+        (MapKeyValue *)arena_alloc(map->_arena, sizeof(MapKeyValue));
+    kv->key = key;
+    kv->key_len = key_len;
+    kv->value = value;
+    kv->next = NULL;
+
+    prev->next = kv;
+    map->len += 1;
+    if (map->len >= map->cap * 80 / 100) {
+      _reorg(map, 2, _REORG_INC);
+    }
+    return map;
+  }
+
+  return map;
+}
+
+Map *map_delete(Map *map, void *key, size_t key_len) {
   if (map == NULL || key == NULL || key_len <= 0) {
     return NULL;
   }
@@ -238,7 +304,15 @@ Map *map_delete(Map *map, void *key, size_t key_len, void *value) {
   }
 
   if (_cmp(map->kvs[idx]->key, map->kvs[idx]->key_len, key, key_len)) {
-    map->kvs[idx] = cur->next;
+    MapKeyValue *new_head = map->kvs[idx]->next;
+    arena_free(map->_arena, map->kvs[idx]);
+    map->kvs[idx] = new_head;
+    map->len -= 1;
+    // MAYBE: TODO: _reorg, but need to think about the condition properly
+    // if (map->len <= map->cap * 20 / 100) {
+    //   _reorg(map, 2, _REORG_DEC); // TODO: NOTE: this is a good place to test
+    //   _reorg, down or up;
+    // }
     return map;
   }
 
@@ -248,6 +322,12 @@ Map *map_delete(Map *map, void *key, size_t key_len, void *value) {
   for (; cur != NULL; cur = cur->next) {
     if (_cmp(cur->key, cur->key_len, key, key_len)) {
       prev->next = cur->next;
+      arena_free(map->_arena, cur);
+      map->len -= 1;
+      // MAYBE: TODO: _reorg, but need to think about the condition properly
+      // if (map->len <= map->cap * 20 / 100) {
+      //  _reorg(map, 2, _REORG_DEC);
+      // }
       return map;
     }
     prev = cur;
