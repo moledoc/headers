@@ -21,7 +21,6 @@ The header file setup is inspired by header-only library style, but does diverge
 	- [ ] ring buffer/circular buffer (?) `-DRING_BUFFER
 - map.h
 	- [x] map `-DMAP`
-ize
 - TODO: trees
 	- [ ] binary `-DBINARY_TREE`
 	- [ ] trie `-DTRIE_TREE`
