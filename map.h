@@ -6,9 +6,7 @@
 #if defined(MAP) // HEADER
 #pragma once
 
-#include <assert.h>
-#include <stdlib.h>
-#include <string.h>
+#include <stdbool.h>
 
 #define ARENA
 #include "arena.h"
@@ -86,17 +84,18 @@ Map *map_delete(Map *map, void *key, size_t key_len);
 
 bool _cmp(void *k1, size_t k1_len, void *k2, size_t k2_len) {
   if (k1 == NULL || k2 == NULL || k1_len <= 0 || k2_len == 0) {
-    return 0;
+    return false;
   }
   if (k1_len != k2_len) {
-    return 0;
+    return false;
   }
   for (int i = 0; i < k1_len; i += 1) {
-    if (((uint64_t *)k1)[i] != ((uint64_t *)k2)[i]) {
-      return 0;
+    // if (((uint64_t *)k1)[i] != ((uint64_t *)k2)[i]) {
+    if (((int *)k1)[i] != ((int *)k2)[i]) {
+      return false;
     }
   }
-  return 1;
+  return true;
 }
 
 enum _reorgAction { _REORG_INC, _REORG_DEC };
@@ -171,7 +170,7 @@ void _reorg(Map *map, size_t factor, enum _reorgAction action) {
 }
 
 int map_hash(void *key, size_t key_len, size_t cap) {
-  uint64_t *kkey = (uint64_t *)key;
+  int *kkey = (int *)key;
   int h = 0;
 
   // hash_multiplier is multiplier used when calculating
@@ -185,6 +184,9 @@ int map_hash(void *key, size_t key_len, size_t cap) {
   }
   if (cap == 0) {
     cap = key_len;
+  }
+  if (h < 0) {
+    h *= -1;
   }
   return h % cap;
 }
@@ -248,6 +250,7 @@ void *map_find(Map *map, void *key, size_t key_len) {
   if (map == NULL || key == NULL || key_len <= 0) {
     return NULL;
   }
+
   int idx = map->hash(key, key_len, map->cap);
 
   MapKeyValue *cur = map->kvs[idx];
