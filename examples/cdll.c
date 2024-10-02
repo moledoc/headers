@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 #define CIRCULAR_DOUBLY_LINKED_LIST
-#include "list.h"
+#include "../list.h"
 
 bool cdll_cmp_int(void *a, void *b) { return *(int *)a == *(int *)b; }
 
