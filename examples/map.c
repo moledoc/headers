@@ -122,6 +122,41 @@ int main() {
 }
 #endif // INT
 
+#ifdef NUL_VAL
+void int_key(MapKeyValue *kv, void *i) {
+  if (i != NULL) {
+    printf("i: %d\n", *(int *)i);
+    *(int *)i += 1;
+  }
+  if (kv == NULL) {
+    printf("(nil)\n");
+  } else {
+    printf("\"%d\"(%d): \"%p\"\n", *(int *)kv->key, (size_t)kv->key_len,
+           kv->value);
+  }
+}
+
+int main() {
+  Map *map = map_create(NULL, NULL);
+
+  for (int i = 0; i < 100; i += 1) {
+    int *j = (int *)arena_alloc(map->arena, 1 * sizeof(int));
+    *j = i;
+    map_insert(map, (void *)j, sizeof(i) / sizeof(int), NULL);
+  }
+  map_list(map, int_key, NULL);
+
+  // int *f = (int *)arena_alloc(map->arena, 1 * sizeof(int));
+  // int *found = (int *)map_find(map, (void *)f, sizeof(*f) / sizeof(int),
+  // NULL); *f = 77;
+  int f = 77;
+  void *found = map_find(map, (void *)&f, sizeof(f) / sizeof(int));
+  printf("found this: %p\n", found);
+
+  map_free(map);
+}
+#endif // NUL_VAL
+
 #ifdef KVS
 
 typedef struct {

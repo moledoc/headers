@@ -88,6 +88,16 @@ Map *map_delete(Map *map, void *key, size_t key_len);
 #include <stdlib.h>
 #include <string.h>
 
+typedef struct {
+} _empty;
+
+typedef struct {
+  size_t offset;
+  MapKeyValue **kvs;
+} _reorgCollector;
+
+enum _reorgAction { _REORG_INC, _REORG_DEC };
+
 bool _cmp(void *k1, size_t k1_len, void *k2, size_t k2_len) {
   if (k1 == NULL || k2 == NULL || k1_len <= 0 || k2_len == 0) {
     return false;
@@ -102,13 +112,6 @@ bool _cmp(void *k1, size_t k1_len, void *k2, size_t k2_len) {
   }
   return true;
 }
-
-enum _reorgAction { _REORG_INC, _REORG_DEC };
-
-typedef struct {
-  size_t offset;
-  MapKeyValue **kvs;
-} _reorgCollector;
 
 void _reorg_collection(MapKeyValue *kv, void *collector) {
   ((_reorgCollector *)collector)->kvs[((_reorgCollector *)collector)->offset] =
@@ -284,7 +287,7 @@ Map *map_insert(Map *map, void *key, size_t key_len, void *value) {
         (MapKeyValue *)arena_alloc(map->arena, sizeof(MapKeyValue));
     kv->key = key;
     kv->key_len = key_len;
-    kv->value = value;
+    kv->value = value != NULL ? value : &((_empty){});
     kv->next = NULL;
 
     map->kvs[idx] = kv;
