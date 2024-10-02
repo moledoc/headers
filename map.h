@@ -332,12 +332,10 @@ Map *map_delete(Map *map, void *key, size_t key_len) {
     map->kvs[idx] = new_head;
     map->len -= 1;
     // MAYBE: TODO: _reorg, but need to think about the condition properly
-    if (map->len <= map->cap * 20 / 100) {
-      printf("HERE: %d\n", map->cap);
-      _reorg(map, 2, _REORG_DEC); // TODO: NOTE: this is a good place to test
-                                  // _reorg, down or up;
-      printf("HERE: %d\n", map->cap);
-    }
+    // if (map->len <= map->cap * 20 / 100) {
+    //  _reorg(map, 2, _REORG_DEC); // TODO: NOTE: this is a good place to test
+    //                              // _reorg, down or up;
+    // }
     return map;
   }
 

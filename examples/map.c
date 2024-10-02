@@ -77,5 +77,10 @@ int main() {
   }
   map_list(map, int_key, NULL);
 
+  int *f = (int *)arena_alloc(map->arena, 1 * sizeof(int));
+  *f = 77;
+  int *found = (int *)map_find(map, (void *)f, sizeof(*f) / sizeof(int));
+  printf("found this: %d\n", *found);
+
   map_free(map);
 }
