@@ -129,14 +129,14 @@ _ReorgCollector *_reorg_extract_kvs(Map *map) {
   return collector;
 }
 
-void _recompute_idx(Map *map, MapKeyValue **kvs) {
-  for (int i = 0; i < map->len; i += 1) {
+void _recompute_idx(Map *map, MapKeyValue **kvs, size_t kv_count) {
+  for (int i = 0; i < kv_count; i += 1) {
     map_insert(map, kvs[i]->key, kvs[i]->key_len, kvs[i]->value);
   }
 }
 
 void _reorg(Map *map, size_t factor, enum _ReorgAction action) {
-  if (map == NULL || factor <= 0) {
+  if (map == NULL || factor <= 1) {
     return;
   }
 
@@ -145,9 +145,21 @@ void _reorg(Map *map, size_t factor, enum _ReorgAction action) {
   _ReorgCollector *collector = _reorg_extract_kvs(map);
 
   Arena *old_arena = map->_arena;
-  ARENA_CAP = (2 + 1) * map->cap; // NOTE: with some redundancy
-  map->_arena = arena_create();
-  _recompute_idx(map, collector->kvs);
+  map->_arena = arena_create(
+      2 * factor * map->cap); // NOTE: half is for size, half for actual data
+
+  // NOTE: set map->cap after collection and before recomputing indices
+  // map_apply will segfault otherwise in collection
+  // and recomputing uses hash, which uses map->cap.
+  if (action == _REORG_INC) {
+    map->cap = factor * map->cap;
+  } else if (action == _REORG_DEC) {
+    map->cap = map->cap / factor;
+  }
+
+  map->len = 0; // NOTE: set len to zero, because insert will increase map->len
+
+  _recompute_idx(map, collector->kvs, collector->offset);
 
   if (collector->kvs != NULL) {
     free(collector->kvs);
@@ -156,13 +168,6 @@ void _reorg(Map *map, size_t factor, enum _ReorgAction action) {
     free(collector);
   }
   arena_destroy(old_arena);
-
-  // NOTE: set later, otherwise segfault in map_apply
-  if (action == _REORG_INC) {
-    map->cap = factor * map->cap;
-  } else if (action == _REORG_DEC) {
-    map->cap = map->cap / factor;
-  }
 }
 
 int map_hash(void *key, size_t key_len, size_t cap) {
@@ -209,8 +214,8 @@ Map *map_create(int (*hash)(void *key, size_t key_len, size_t cap)) {
   Map *new = calloc(1, sizeof(Map));
   new->hash = hash;
   new->kvs = calloc(MAP_BUCKETS_SIZE, sizeof(MapKeyValue *));
-  ARENA_CAP = (2 + 1) * MAP_BUCKETS_SIZE; // NOTE: with some redundancy
-  new->_arena = arena_create();
+  new->_arena = arena_create(
+      2 * MAP_BUCKETS_SIZE); // NOTE: half is for size, half for actual data
   new->len = 0;
   new->cap = MAP_BUCKETS_SIZE;
   return new;
@@ -309,10 +314,12 @@ Map *map_delete(Map *map, void *key, size_t key_len) {
     map->kvs[idx] = new_head;
     map->len -= 1;
     // MAYBE: TODO: _reorg, but need to think about the condition properly
-    // if (map->len <= map->cap * 20 / 100) {
-    //   _reorg(map, 2, _REORG_DEC); // TODO: NOTE: this is a good place to test
-    //   _reorg, down or up;
-    // }
+    if (map->len <= map->cap * 20 / 100) {
+      printf("HERE: %d\n", map->cap);
+      _reorg(map, 2, _REORG_INC); // TODO: NOTE: this is a good place to test
+                                  // _reorg, down or up;
+      printf("HERE: %d\n", map->cap);
+    }
     return map;
   }
 
