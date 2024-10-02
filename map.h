@@ -23,7 +23,7 @@ typedef struct MapKeyValue {
 
 typedef struct {
   int (*hash)(void *key, size_t key_len, size_t cap);
-  Arena *_arena;
+  Arena *arena;
   MapKeyValue **kvs;
   size_t len;
   size_t cap;
@@ -143,8 +143,8 @@ void _reorg(Map *map, size_t factor, enum _reorgAction action) {
 
   _reorgCollector *collector = _reorg_extract_kvs(map);
 
-  Arena *old_arena = map->_arena;
-  map->_arena =
+  Arena *old_arena = map->arena;
+  map->arena =
       arena_create(2 * new_cap); // NOTE: half is for size, half for actual data
 
   if (map->kvs) {
@@ -207,7 +207,7 @@ void map_free(Map *map) {
   if (map->kvs) {
     free(map->kvs);
   }
-  arena_destroy(map->_arena);
+  arena_destroy(map->arena);
   if (map) {
     free(map);
   }
@@ -232,7 +232,7 @@ Map *map_create(int (*hash)(void *key, size_t key_len, size_t cap),
   Map *new = calloc(1, sizeof(Map));
   new->hash = hash;
   new->kvs = calloc(bucket_size, sizeof(MapKeyValue *));
-  new->_arena = arena_create(
+  new->arena = arena_create(
       2 * bucket_size); // NOTE: half is for size, half for actual data
   new->len = 0;
   new->cap = bucket_size;
@@ -273,7 +273,7 @@ Map *map_insert(Map *map, void *key, size_t key_len, void *value) {
   if (map->kvs[idx] == NULL) {
 
     MapKeyValue *kv =
-        (MapKeyValue *)arena_alloc(map->_arena, sizeof(MapKeyValue));
+        (MapKeyValue *)arena_alloc(map->arena, sizeof(MapKeyValue));
     kv->key = key;
     kv->key_len = key_len;
     kv->value = value;
@@ -299,7 +299,7 @@ Map *map_insert(Map *map, void *key, size_t key_len, void *value) {
 
   if (cur == NULL && prev != NULL) {
     MapKeyValue *kv =
-        (MapKeyValue *)arena_alloc(map->_arena, sizeof(MapKeyValue));
+        (MapKeyValue *)arena_alloc(map->arena, sizeof(MapKeyValue));
     kv->key = key;
     kv->key_len = key_len;
     kv->value = value;
@@ -328,7 +328,7 @@ Map *map_delete(Map *map, void *key, size_t key_len) {
 
   if (_cmp(map->kvs[idx]->key, map->kvs[idx]->key_len, key, key_len)) {
     MapKeyValue *new_head = map->kvs[idx]->next;
-    arena_free(map->_arena, map->kvs[idx]);
+    arena_free(map->arena, map->kvs[idx]);
     map->kvs[idx] = new_head;
     map->len -= 1;
     // MAYBE: TODO: _reorg, but need to think about the condition properly
@@ -347,7 +347,7 @@ Map *map_delete(Map *map, void *key, size_t key_len) {
   for (; cur != NULL; cur = cur->next) {
     if (_cmp(cur->key, cur->key_len, key, key_len)) {
       prev->next = cur->next;
-      arena_free(map->_arena, cur);
+      arena_free(map->arena, cur);
       map->len -= 1;
       // MAYBE: TODO: _reorg, but need to think about the condition properly
       // if (map->len <= map->cap * 20 / 100) {

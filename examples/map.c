@@ -71,7 +71,7 @@ int main() {
   Map *map = map_create(NULL, NULL);
 
   for (int i = 0; i < 100; i += 1) {
-    int *j = calloc(1, sizeof(int));
+    int *j = (int *)arena_alloc(map->arena, 1 * sizeof(int));
     *j = i;
     map_insert(map, (void *)j, sizeof(i) / sizeof(int), (void *)j);
   }
