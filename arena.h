@@ -13,31 +13,26 @@ typedef struct Arena {
   uintptr_t data[];
 } Arena;
 
-enum {
-  ARENA_CAP_DEFAULT = 1 * 1024,
-};
-
-// ARENA_CAP is variable that controls the size of allocated arena size
-uint32_t ARENA_CAP = ARENA_CAP_DEFAULT;
-
 // arena_create is a function that creates an memory arena that can be used to
-// allocate objects ARENA_CAP is used to control the size of memory arena.
-// returns pointer to the memory arena
-// allocs memory
-Arena *arena_create();
+// allocate objects.
+// returns NULL if arena_cap is zero.
+// returns pointer to the memory arena.
+// allocs memory.
+Arena *arena_create(uint32_t arena_cap);
 
 // arena_destroy destroys the memory arena.
-// returns NULL; recommended to assign it to arena var to avoid use after free
-// frees memory
+// returns NULL.
+// recommended to assign return value to avoid use after free.
+// frees memory.
 Arena *arena_destroy(Arena *arena);
 
-// arena_alloc allocates requested size of memory and returns it to program
+// arena_alloc allocates requested size in the arena and returns it.
 uintptr_t *arena_alloc(Arena *arena, uint32_t size);
 
-// arena_free deallocates memory in the arena
+// arena_free deallocates memory in the arena.
 uintptr_t *arena_free(Arena *arena, void *data);
 
-// arena_data_size returns size of the data
+// arena_data_size returns size of the data.
 uint32_t arena_data_size(void *data);
 
 #endif // ARENA // HEADER
@@ -77,18 +72,21 @@ void arena_zero_page(Arena *arena) {
 
 // ARENA_HELPERS
 
-Arena *arena_create() {
+Arena *arena_create(uint32_t arena_cap) {
+  if (arena_cap == 0) {
+    return NULL;
+  }
   int prot = PROT_READ | PROT_WRITE;
   int flags = MAP_ANONYMOUS | MAP_PRIVATE;
   int fd = -1;
   off_t offset = 0;
-  size_t length = sizeof(Arena) + sizeof(uintptr_t) * ARENA_CAP;
+  size_t length = sizeof(Arena) + sizeof(uintptr_t) * arena_cap;
   Arena *arena = mmap(NULL, length, prot, flags, fd, offset);
   if (arena == MAP_FAILED) {
     return NULL;
   }
   arena->next = NULL;
-  arena->cap = ARENA_CAP;
+  arena->cap = arena_cap;
   arena->offset = 0;
   arena->ref_count = 0;
   arena_zero_page(arena);
@@ -119,15 +117,15 @@ uintptr_t *arena_alloc(Arena *arena, uint32_t size) {
     arena->offset += norm_size + 1;
     arena->ref_count += 1;
   } else {
-    uint32_t cur_cap = ARENA_CAP;
+    uint32_t arena_cap = arena->cap;
     if (arena->cap < norm_size + 1) {
-      ARENA_CAP = norm_size + 1;
+      arena_cap = norm_size + 1;
     }
     // NOTE: find last arena page that fits the data
     Arena *a = NULL;
     for (;; arena = arena->next) {
       if (arena->next == NULL) {
-        arena->next = arena_create();
+        arena->next = arena_create(arena_cap);
         a = arena->next;
         break;
       }
@@ -137,9 +135,6 @@ uintptr_t *arena_alloc(Arena *arena, uint32_t size) {
       }
     }
     ret = arena_alloc(a, size);
-    if (cur_cap != ARENA_CAP) {
-      ARENA_CAP = cur_cap;
-    }
   }
   return ret;
 }

@@ -18,11 +18,10 @@ The header file setup is inspired by header-only library style, but does diverge
 	- [x] circular doubly linked list `-DCIRCULAR_DOUBLY_LINKED_LIST`
 	- [x] stack `-DSTACK`
 	- [x] queue `-DQUEUE`
-	- [x] map `-DMAP`
-		- TODO: refactor to apply
-			- also allow NULL as value, to enable analog to go's eg `map[string]struct{}` construct
-		- TODO: implement array resizing (up/down) and re-org on data after resize
 	- [ ] ring buffer/circular buffer (?) `-DRING_BUFFER
+- map.h
+	- [x] map `-DMAP`
+ize
 - TODO: trees
 	- [ ] binary `-DBINARY_TREE`
 	- [ ] trie `-DTRIE_TREE`

@@ -728,6 +728,7 @@ QueueNode *queue_push(QueueNode *cursor, void *data) {
   if (data == NULL) {
     return cursor;
   }
+
   if (cursor->data == NULL) {
     cursor->data = data;
   } else {
@@ -760,6 +761,7 @@ QueueNode *queue_pop(QueueNode *cursor, void **out) {
 #endif // QUEUE // IMPLEMENTATION
 
 // }
+
 // {
 #if defined(MAP) // HEADER
 #pragma once
