@@ -57,6 +57,12 @@ void map_list(Map *map, void (*print)(MapKeyValue *, void *), void *fmt);
 // if `key` doesn't exist, insert the `value`
 // if `key` exists, update the `value`
 // returns NULL if `map` or `key` is NULL or key_len <= 0
+// key_len is the count of objects in the key, examples:
+// * int - 1
+// * char * - 1 (but providing strlen as key_len seems to also work ¯\_(-.-)_/¯
+// )
+// * {.x(int), .y(int)} - 2
+// * {.x(int), .y(int), .z(char *)} - 3
 // NULL `value` is allowed.
 // allocs memory.
 Map *map_insert(Map *map, void *key, size_t key_len, void *value);
@@ -90,7 +96,6 @@ bool _cmp(void *k1, size_t k1_len, void *k2, size_t k2_len) {
     return false;
   }
   for (int i = 0; i < k1_len; i += 1) {
-    // if (((uint64_t *)k1)[i] != ((uint64_t *)k2)[i]) {
     if (((int *)k1)[i] != ((int *)k2)[i]) {
       return false;
     }
