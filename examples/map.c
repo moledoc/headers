@@ -4,7 +4,11 @@
 #define MAP
 #include "../map.h"
 
-void str_key(MapKeyValue *kv, void *_) {
+void str_key(MapKeyValue *kv, void *i) {
+  if (i != NULL) {
+    printf("i: %d\n", *(int *)i);
+    *(int *)i += 1;
+  }
   if (kv == NULL) {
     printf("(nil)\n");
   } else {
@@ -13,9 +17,10 @@ void str_key(MapKeyValue *kv, void *_) {
   }
 }
 
-int main() {
+int main1() {
   printf("hey\n");
-  Map *map = map_create(NULL);
+  Map *map = map_create(NULL, NULL);
+  printf("hey\n");
 
   printf("Map contents: (should be nothing)\n");
   map_list(map, str_key, NULL);
@@ -42,6 +47,35 @@ int main() {
   printf("deleted key \"%s\"\n", k2);
   printf("Map contents:\n");
   map_list(map, str_key, NULL);
+
+  int counter = 0;
+  // map_list(map, str_key, (void *)&counter);
+
+  map_free(map);
+}
+
+void int_key(MapKeyValue *kv, void *i) {
+  if (i != NULL) {
+    printf("i: %d\n", *(int *)i);
+    *(int *)i += 1;
+  }
+  if (kv == NULL) {
+    printf("(nil)\n");
+  } else {
+    printf("\"%d\"(%d): \"%d\"\n", *(int *)kv->key, (size_t)kv->key_len,
+           *(int *)kv->value);
+  }
+}
+
+int main() {
+  Map *map = map_create(NULL, NULL);
+
+  for (int i = 0; i < 100; i += 1) {
+    int *j = calloc(1, sizeof(int));
+    *j = i;
+    map_insert(map, (void *)j, sizeof(i) / sizeof(int), (void *)j);
+  }
+  map_list(map, int_key, NULL);
 
   map_free(map);
 }

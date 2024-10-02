@@ -29,23 +29,6 @@ typedef struct {
   size_t cap;
 } Map;
 
-enum {
-  MAP_BUCKETS_SIZE_DEFAULT =
-      521, // MAP_BUCKETS_SIZE_DEFAULT is the buckets size for Map when
-           // creating a new map.
-           // Guarantee of no common factor for array size, hash
-           // multiplier likely data values;
-           // ref: The Practice of Programming, B. Kernighan, R. Pike, p 57
-
-  HASH_MULTIPLIER =
-      31, // HASH_MULTIPLIER is multiplier used when calculating
-          // hash for string map key.
-          // Empirically shown to be good;
-          // ref: The Practice of Programming, B. Kernighan, R. Pike, p 56
-};
-
-int MAP_BUCKETS_SIZE = MAP_BUCKETS_SIZE_DEFAULT;
-
 // map_hash is default hashing function.
 int map_hash(void *key, size_t key_len, size_t cap);
 
@@ -58,9 +41,15 @@ void map_free(Map *map);
 
 // map_create prepares a new map with all the helper functions.
 // if NULL is provided for hash, then map_hash is used.
-// default buckets size is MAP_BUCKETS_SIZE.
+// if NULL is provided for pbucket_size then a default of 521 is used:
+// * bucket_size is the buckets size for Map when
+// * creating a new map.
+// * Guarantee of no common factor for array size, hash
+// * multiplier likely data values;
+// * ref: The Practice of Programming, B. Kernighan, R. Pike, p 57
 // allocs memory.
-Map *map_create(int (*hash)(void *key, size_t key_len, size_t cap));
+Map *map_create(int (*hash)(void *key, size_t key_len, size_t cap),
+                size_t *pbucket_size);
 
 // map_list prints the entire map.
 void map_list(Map *map, void (*print)(MapKeyValue *, void *), void *fmt);
@@ -92,6 +81,8 @@ Map *map_delete(Map *map, void *key, size_t key_len);
 #pragma once
 
 #include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
 
 bool _cmp(void *k1, size_t k1_len, void *k2, size_t k2_len) {
   if (k1 == NULL || k2 == NULL || k1_len <= 0 || k2_len == 0) {
@@ -108,22 +99,22 @@ bool _cmp(void *k1, size_t k1_len, void *k2, size_t k2_len) {
   return 1;
 }
 
-enum _ReorgAction { _REORG_INC, _REORG_DEC };
+enum _reorgAction { _REORG_INC, _REORG_DEC };
 
 typedef struct {
   size_t offset;
   MapKeyValue **kvs;
-} _ReorgCollector;
+} _reorgCollector;
 
 void _reorg_collection(MapKeyValue *kv, void *collector) {
-  ((_ReorgCollector *)collector)->kvs[((_ReorgCollector *)collector)->offset] =
+  ((_reorgCollector *)collector)->kvs[((_reorgCollector *)collector)->offset] =
       kv;
-  ((_ReorgCollector *)collector)->offset += 1;
+  ((_reorgCollector *)collector)->offset += 1;
   return;
 }
 
-_ReorgCollector *_reorg_extract_kvs(Map *map) {
-  _ReorgCollector *collector = calloc(1, sizeof(_ReorgCollector));
+_reorgCollector *_reorg_extract_kvs(Map *map) {
+  _reorgCollector *collector = calloc(1, sizeof(_reorgCollector));
   collector->kvs = calloc(map->len, sizeof(MapKeyValue *));
   map_apply(map, _reorg_collection, (void *)collector);
   return collector;
@@ -131,31 +122,40 @@ _ReorgCollector *_reorg_extract_kvs(Map *map) {
 
 void _recompute_idx(Map *map, MapKeyValue **kvs, size_t kv_count) {
   for (int i = 0; i < kv_count; i += 1) {
+    kvs[i]->next = NULL; // NOTE: avoid pointing to old address
     map_insert(map, kvs[i]->key, kvs[i]->key_len, kvs[i]->value);
   }
 }
 
-void _reorg(Map *map, size_t factor, enum _ReorgAction action) {
+void _reorg(Map *map, size_t factor, enum _reorgAction action) {
   if (map == NULL || factor <= 1) {
     return;
   }
 
-  MapKeyValue **new = calloc(factor * map->cap, sizeof(MapKeyValue *));
+  size_t new_cap;
+  if (action == _REORG_INC) {
+    new_cap = factor * map->cap;
+  } else if (action == _REORG_DEC) {
+    new_cap = map->cap / factor;
+  }
 
-  _ReorgCollector *collector = _reorg_extract_kvs(map);
+  MapKeyValue **new = calloc(new_cap, sizeof(MapKeyValue *));
+
+  _reorgCollector *collector = _reorg_extract_kvs(map);
 
   Arena *old_arena = map->_arena;
-  map->_arena = arena_create(
-      2 * factor * map->cap); // NOTE: half is for size, half for actual data
+  map->_arena =
+      arena_create(2 * new_cap); // NOTE: half is for size, half for actual data
+
+  if (map->kvs) {
+    free(map->kvs);
+  }
+  map->kvs = new;
 
   // NOTE: set map->cap after collection and before recomputing indices
   // map_apply will segfault otherwise in collection
   // and recomputing uses hash, which uses map->cap.
-  if (action == _REORG_INC) {
-    map->cap = factor * map->cap;
-  } else if (action == _REORG_DEC) {
-    map->cap = map->cap / factor;
-  }
+  map->cap = new_cap;
 
   map->len = 0; // NOTE: set len to zero, because insert will increase map->len
 
@@ -173,8 +173,15 @@ void _reorg(Map *map, size_t factor, enum _ReorgAction action) {
 int map_hash(void *key, size_t key_len, size_t cap) {
   uint64_t *kkey = (uint64_t *)key;
   int h = 0;
+
+  // hash_multiplier is multiplier used when calculating
+  // hash for string map key.
+  // Empirically shown to be good;
+  // ref: The Practice of Programming, B. Kernighan, R. Pike, p 56
+  int hash_multiplier = 31;
+
   for (int i = 0; i < key_len; i += 1) {
-    h += HASH_MULTIPLIER * h + kkey[i];
+    h += hash_multiplier * h + kkey[i];
   }
   if (cap == 0) {
     cap = key_len;
@@ -206,18 +213,29 @@ void map_free(Map *map) {
   }
 }
 
-Map *map_create(int (*hash)(void *key, size_t key_len, size_t cap)) {
+Map *map_create(int (*hash)(void *key, size_t key_len, size_t cap),
+                size_t *pbucket_size) {
   if (hash == NULL) {
     hash = map_hash;
   }
 
+  // bucket_size is the buckets size for Map when
+  // creating a new map.
+  // Guarantee of no common factor for array size, hash
+  // multiplier likely data values;
+  // ref: The Practice of Programming, B. Kernighan, R. Pike, p 57
+  size_t bucket_size = 521;
+  if (pbucket_size != NULL) {
+    bucket_size = *pbucket_size;
+  }
+
   Map *new = calloc(1, sizeof(Map));
   new->hash = hash;
-  new->kvs = calloc(MAP_BUCKETS_SIZE, sizeof(MapKeyValue *));
+  new->kvs = calloc(bucket_size, sizeof(MapKeyValue *));
   new->_arena = arena_create(
-      2 * MAP_BUCKETS_SIZE); // NOTE: half is for size, half for actual data
+      2 * bucket_size); // NOTE: half is for size, half for actual data
   new->len = 0;
-  new->cap = MAP_BUCKETS_SIZE;
+  new->cap = bucket_size;
   return new;
 }
 
@@ -316,7 +334,7 @@ Map *map_delete(Map *map, void *key, size_t key_len) {
     // MAYBE: TODO: _reorg, but need to think about the condition properly
     if (map->len <= map->cap * 20 / 100) {
       printf("HERE: %d\n", map->cap);
-      _reorg(map, 2, _REORG_INC); // TODO: NOTE: this is a good place to test
+      _reorg(map, 2, _REORG_DEC); // TODO: NOTE: this is a good place to test
                                   // _reorg, down or up;
       printf("HERE: %d\n", map->cap);
     }
