@@ -112,9 +112,12 @@ bool _cmp(void *k1, size_t k1_len, void *k2, size_t k2_len) {
   */
 
   int i = 0;
-  while (((int *)k1)[i] > 0 && ((int *)k2)[i] > 0) {
+  while (true) {
     if (((int *)k1)[i] != ((int *)k2)[i]) {
       return false;
+    }
+    if (((int *)k1)[i] == 0) {
+      break;
     }
     i += 1;
   }
@@ -132,6 +135,8 @@ bool _cmp(void *k1, size_t k1_len, void *k2, size_t k2_len) {
   // with 0, but with garbage. Only saw neg garbage, but if
   // there's positive ones, then this won't be suitable
   // solution.
+  // NOTE: found an issue -- negative int values as valid keys will mess this
+  // up.
   return ((int *)k1)[i] == ((int *)k2)[i] ||
          max(((int *)k1)[i], 0) == max(((int *)k2)[i], 0);
 }
@@ -217,7 +222,8 @@ int map_hash(void *key, size_t key_len, size_t cap) {
   */
 
   int i = 0;
-  while (kkey[i] > 0) {
+  while (kkey[i] != 0) { // NOTE: possible to do oopsy-doopsy; key should be
+                         // alloced to work exactly as expected
     h += hash_multiplier * h + kkey[i];
     i += 1;
   }

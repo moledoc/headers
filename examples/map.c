@@ -152,11 +152,10 @@ int main() {
   }
   map_list(map, int_key, NULL);
 
-  // int *f = (int *)arena_alloc(map->arena, 1 * sizeof(int));
-  // int *found = (int *)map_find(map, (void *)f, sizeof(*f) / sizeof(int),
-  // NULL); *f = 77;
-  int f = 177; // vs `f = 77`
-  int *found = (int *)map_find(map, (void *)&f, sizeof(f) / sizeof(int));
+  int *f = (int *)arena_alloc(map->arena, 1 * sizeof(int));
+  *f = 177; // vs `f = 77`
+  int *found = (int *)map_find(map, (void *)f, sizeof(*f) / sizeof(int));
+  // int f = 77; // don't do this, always alloc
   printf("found this: %p\n", found);
 
   map_free(map);
@@ -284,14 +283,23 @@ int main() {
 
   map_list(map, k77, NULL);
 
-  KV f4 = (KV){
-      .k = 77,
-      .v = -77,
-      .str = "test2",
-      .big = 1234567890,
-  };
-  printf("HERE: %lu\n", sizeof(f4));
-  KV *found4 = (KV *)map_find(map, (void *)&f4, 5);
+  KV *f4 = (KV *)arena_alloc(map->arena, 1 * sizeof(KV));
+
+  f4->k = 77;
+  f4->v = -77;
+  f4->str = "test2";
+  f4->big = 1234567890;
+
+  KV *found4 = (KV *)map_find(map, (void *)f4, 5);
+  if (found4 == NULL) {
+    printf("found4: not found\n");
+  } else {
+    printf("found4 this: {\"%d\", \"%d\", \"%s\", %lu}\n", found4->k, found4->v,
+           found4->str, found4->big);
+  }
+
+  f4->big = 1234567891;
+  found4 = (KV *)map_find(map, (void *)f4, 5);
   if (found4 == NULL) {
     printf("found4: not found\n");
   } else {
