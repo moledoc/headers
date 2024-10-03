@@ -98,19 +98,42 @@ typedef struct {
 
 enum _reorgAction { _REORG_INC, _REORG_DEC };
 
+int max(int a, int b) { return a < b ? b : a; }
+
 bool _cmp(void *k1, size_t k1_len, void *k2, size_t k2_len) {
   if (k1 == NULL || k2 == NULL || k1_len <= 0 || k2_len == 0) {
     return false;
   }
-  if (k1_len != k2_len) {
-    return false;
-  }
-  for (int i = 0; i < k1_len; i += 1) {
+
+  /*
+    if (k1_len != k2_len) {
+      return false;
+    }
+  */
+
+  int i = 0;
+  while (((int *)k1)[i] > 0 && ((int *)k2)[i] > 0) {
     if (((int *)k1)[i] != ((int *)k2)[i]) {
       return false;
     }
+    i += 1;
   }
+
+  /*
+    for (int i = 0; i < k1_len; i += 1) {
+      if (((int *)k1)[i] != ((int *)k2)[i]) {
+        return false;
+      }
+    }
   return true;
+  */
+
+  // NOTE: could produce bugs: non-alloced vals don't end
+  // with 0, but with garbage. Only saw neg garbage, but if
+  // there's positive ones, then this won't be suitable
+  // solution.
+  return ((int *)k1)[i] == ((int *)k2)[i] ||
+         max(((int *)k1)[i], 0) == max(((int *)k2)[i], 0);
 }
 
 void _reorg_collection(MapKeyValue *kv, void *collector) {
@@ -187,9 +210,18 @@ int map_hash(void *key, size_t key_len, size_t cap) {
   // ref: The Practice of Programming, B. Kernighan, R. Pike, p 56
   int hash_multiplier = 31;
 
-  for (int i = 0; i < key_len; i += 1) {
+  /*
+    for (int i = 0; i < key_len; i += 1) {
+      h += hash_multiplier * h + kkey[i];
+    }
+  */
+
+  int i = 0;
+  while (kkey[i] > 0) {
     h += hash_multiplier * h + kkey[i];
+    i += 1;
   }
+
   if (cap == 0) {
     cap = key_len;
   }

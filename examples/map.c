@@ -60,10 +60,6 @@ int main() {
   map = map_insert(map, k1_3, sizeof(k1_3) / sizeof(char *), "k1_3");
   char *k1_4 = "k1_4";
   map = map_insert(map, k1_4, sizeof(k1_4) / sizeof(char *), "k1_4");
-  char *k1_5 = "k1_5 555555555555555555555555555555555555555555555555555555";
-  map = map_insert(map, k1_5, sizeof(k1_5) / sizeof(char *), "k1_5");
-  char *k1_6 = "k1_5 555555555555555555555555555555555555555555555555555555";
-  map = map_insert(map, k1_6, strlen(k1_6), "k1_5");
 
   printf("\n\nbefore finding:\n");
   map_list(map, str_key, NULL);
@@ -78,10 +74,14 @@ int main() {
   printf("searched \"%s\", found \"%s\"\n", k1, f3);
   printf("searched \"%s\", found \"%s\"\n", k3, f4);
 
+  char *k1_5 = "k1_5 555555555555555555555555555555555555555555555555555555";
+  map = map_insert(map, k1_5, sizeof(k1_5) / sizeof(char *), "k1_5");
   char *f5 = (char *)map_find(map, k1_5, sizeof(k1_5) / sizeof(char *));
   printf("searched \"%s\", found \"%s\"\n", k1_5, f5);
-  char *f6 = (char *)map_find(map, k1_6, strlen(k1_6));
-  printf("searched \"%s\" with strlen, found \"%s\"\n", k1_6, f6);
+  char *k1_6 = "k1_5 555555555555555555555555555555555555555555555555555555";
+  map = map_insert(map, k1_6, 1, "k1_6");
+  char *f6 = (char *)map_find(map, k1_6, 1);
+  printf("searched \"%s\" with 1, found \"%s\"\n", k1_6, f6);
 
   map_free(map);
 }
@@ -111,12 +111,18 @@ int main() {
   }
   map_list(map, int_key, NULL);
 
-  // int *f = (int *)arena_alloc(map->arena, 1 * sizeof(int));
-  // int *found = (int *)map_find(map, (void *)f, sizeof(*f) / sizeof(int),
-  // NULL); *f = 77;
-  int f = 77;
-  int *found = (int *)map_find(map, (void *)&f, sizeof(f) / sizeof(int));
-  printf("found this: %d\n", *found);
+  int *f = (int *)arena_alloc(map->arena, 1 * sizeof(int));
+  *f = 77;
+  int *found = (int *)map_find(map, (void *)f, sizeof(*f) / sizeof(int));
+
+  // int f = 77;
+  // int *found = (int *)map_find(map, (void *)&f, sizeof(f) / sizeof(int));
+
+  if (found == NULL) {
+    printf("found: not found\n");
+  } else {
+    printf("found this: %d\n", *found);
+  }
 
   map_free(map);
 }
@@ -163,6 +169,7 @@ typedef struct {
   int k;
   int v;
   char *str;
+  unsigned long long big;
 } KV;
 
 void kv_key(MapKeyValue *kv, void *i) {
@@ -173,10 +180,28 @@ void kv_key(MapKeyValue *kv, void *i) {
   if (kv == NULL) {
     printf("(nil)\n");
   } else {
-    printf("{\"%d\", \"%d\", \"%s\"} (%d): {\"%d\", \"%d\", \"%s\"}\n",
+    printf("{\"%d\", \"%d\", \"%s\"} (%d): {\"%d\", \"%d\", \"%s\", %lu}\n",
            ((KV *)kv->value)->k, ((KV *)kv->value)->v, ((KV *)kv->value)->str,
            (size_t)kv->key_len, ((KV *)kv->value)->k, ((KV *)kv->value)->v,
-           ((KV *)kv->value)->str);
+           ((KV *)kv->value)->str, ((KV *)kv->value)->big);
+  }
+}
+
+void k77(MapKeyValue *kv, void *i) {
+  if (i != NULL) {
+    printf("i: %d\n", *(int *)i);
+    *(int *)i += 1;
+  }
+  if (kv == NULL) {
+    printf("(nil)\n");
+  } else {
+    if (*(int *)kv->key != 77) {
+      return;
+    }
+    printf("{\"%d\", \"%d\", \"%s\"} (%d): {\"%d\", \"%d\", \"%s\", %lu}\n",
+           ((KV *)kv->value)->k, ((KV *)kv->value)->v, ((KV *)kv->value)->str,
+           (size_t)kv->key_len, ((KV *)kv->value)->k, ((KV *)kv->value)->v,
+           ((KV *)kv->value)->str, ((KV *)kv->value)->big);
   }
 }
 
@@ -230,7 +255,7 @@ int main() {
                    sizeof(j->str) / sizeof(char *),
                (void *)j);
   }
-  map_list(map, kv_key, NULL);
+  // map_list(map, kv_key, NULL);
 
   KV f3 = (KV){
       .k = 100,
@@ -246,6 +271,32 @@ int main() {
   } else {
     printf("found3 this: {\"%d\", \"%d\", \"%s\"}\n", found3->k, found3->v,
            found3->str);
+  }
+
+  int i = 236;
+  KV *j = (KV *)arena_alloc(map->arena, 1 * sizeof(KV));
+  j->k = 77;
+  j->v = -1 * 77;
+  j->str = "test2";
+  j->big = 1234567890;
+  map_insert(map, (void *)j, 5,
+             (void *)j); // NOTE: 1+1+2+1 = key+value+(str+\0)+big
+
+  map_list(map, k77, NULL);
+
+  KV f4 = (KV){
+      .k = 77,
+      .v = -77,
+      .str = "test2",
+      .big = 1234567890,
+  };
+  printf("HERE: %lu\n", sizeof(f4));
+  KV *found4 = (KV *)map_find(map, (void *)&f4, 5);
+  if (found4 == NULL) {
+    printf("found4: not found\n");
+  } else {
+    printf("found4 this: {\"%d\", \"%d\", \"%s\", %lu}\n", found4->k, found4->v,
+           found4->str, found4->big);
   }
 
   map_free(map);
