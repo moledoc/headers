@@ -155,8 +155,8 @@ int main() {
   // int *f = (int *)arena_alloc(map->arena, 1 * sizeof(int));
   // int *found = (int *)map_find(map, (void *)f, sizeof(*f) / sizeof(int),
   // NULL); *f = 77;
-  int f = 77;
-  void *found = map_find(map, (void *)&f, sizeof(f) / sizeof(int));
+  int f = 177; // vs `f = 77`
+  int *found = (int *)map_find(map, (void *)&f, sizeof(f) / sizeof(int));
   printf("found this: %p\n", found);
 
   map_free(map);
