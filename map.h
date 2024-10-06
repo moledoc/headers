@@ -75,7 +75,8 @@ void *map_find(Map *map, void *key, size_t key_len);
 // frees memory.
 Map *map_delete(Map *map, void *key, size_t key_len);
 
-// TODO: reorg - handle up- and down-sizing
+// map_reorg cleans temporary values in map->arena.
+void map_reorg(Map *map);
 
 #endif // defined(MAP) // HEADER
 // }
@@ -157,7 +158,7 @@ void _recompute_idx(Map *map, MapKeyValue **kvs, size_t kv_count) {
 }
 
 void _reorg(Map *map, size_t factor, enum _reorgAction action) {
-  if (map == NULL || factor <= 1) {
+  if (map == NULL || factor <= 0) { // NOTE: allow factor 1 to clean arena
     return;
   }
 
@@ -401,6 +402,8 @@ Map *map_delete(Map *map, void *key, size_t key_len) {
 
   return map;
 }
+
+void map_reorg(Map *map) { _reorg(map, 1, _REORG_INC); }
 
 #endif // defined(MAP) // IMPLEMENTATION
 // }

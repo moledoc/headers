@@ -298,6 +298,8 @@ int main() {
            found4->str, found4->big);
   }
 
+  map_reorg(map);
+
   f4->big = 1234567891;
   found4 = (KV *)map_find(map, (void *)f4, 5);
   if (found4 == NULL) {
