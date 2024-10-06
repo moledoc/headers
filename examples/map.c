@@ -115,13 +115,19 @@ int main() {
   *f = 77;
   int *found = (int *)map_find(map, (void *)f, sizeof(*f) / sizeof(int));
 
-  // int f = 77;
-  // int *found = (int *)map_find(map, (void *)&f, sizeof(f) / sizeof(int));
-
   if (found == NULL) {
     printf("found: not found\n");
   } else {
     printf("found this: %d\n", *found);
+  }
+
+  int f2 = *f;
+  int *found2 = (int *)map_find(map, (void *)&f2, sizeof(f2) / sizeof(int));
+
+  if (found2 == NULL) {
+    printf("found: not found\n");
+  } else {
+    printf("found2 this: %d\n", *found2);
   }
 
   map_free(map);
