@@ -131,14 +131,8 @@ bool _cmp(void *k1, size_t k1_len, void *k2, size_t k2_len) {
   return true;
   */
 
-  // NOTE: could produce bugs: non-alloced vals don't end
-  // with 0, but with garbage. Only saw neg garbage, but if
-  // there's positive ones, then this won't be suitable
-  // solution.
-  // NOTE: found an issue -- negative int values as valid keys will mess this
-  // up.
-  return ((int *)k1)[i] == ((int *)k2)[i] ||
-         max(((int *)k1)[i], 0) == max(((int *)k2)[i], 0);
+  // NOTE: works with only alloced values.
+  return ((int *)k1)[i] == ((int *)k2)[i];
 }
 
 void _reorg_collection(MapKeyValue *kv, void *collector) {
