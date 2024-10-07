@@ -125,9 +125,19 @@ int main() {
   int *found2 = (int *)map_find(map, (void *)&f2, sizeof(f2) / sizeof(int));
 
   if (found2 == NULL) {
-    printf("found: not found\n");
+    printf("found2: not found\n");
   } else {
     printf("found2 this: %d\n", *found2);
+  }
+
+  // FIXME: current map impl doesn't work with this
+  int *f3 = (int *)arena_alloc(map->arena, 1 * sizeof(int));
+  *f3 = 0;
+  int *found3 = (int *)map_find(map, (void *)&f3, sizeof(f3) / sizeof(int));
+  if (found3 == NULL) {
+    printf("found3: not found\n");
+  } else {
+    printf("found3 this: %d\n", *found3);
   }
 
   map_free(map);
@@ -281,7 +291,7 @@ int main() {
   int i = 236;
   KV *j = (KV *)arena_alloc(map->arena, 1 * sizeof(KV));
   j->k = 77;
-  j->v = -1 * 77;
+  j->v = 0;
   j->str = "test2";
   j->big = 1234567890;
   map_insert(map, (void *)j, 5,
@@ -292,7 +302,7 @@ int main() {
   KV *f4 = (KV *)arena_alloc(map->arena, 1 * sizeof(KV));
 
   f4->k = 77;
-  f4->v = -77;
+  f4->v = 0;
   f4->str = "test2";
   f4->big = 1234567890;
 
