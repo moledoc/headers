@@ -106,34 +106,16 @@ bool _cmp(void *k1, size_t k1_len, void *k2, size_t k2_len) {
     return false;
   }
 
-  /*
-    if (k1_len != k2_len) {
-      return false;
-    }
-  */
+  if (k1_len != k2_len) {
+    return false;
+  }
 
-  int i = 0;
-  while (true) {
+  for (int i = 0; i < k1_len; i += 1) {
     if (((int *)k1)[i] != ((int *)k2)[i]) {
       return false;
     }
-    if (((int *)k1)[i] == 0) {
-      break;
-    }
-    i += 1;
   }
-
-  /*
-    for (int i = 0; i < k1_len; i += 1) {
-      if (((int *)k1)[i] != ((int *)k2)[i]) {
-        return false;
-      }
-    }
   return true;
-  */
-
-  // NOTE: works with only alloced values.
-  return ((int *)k1)[i] == ((int *)k2)[i];
 }
 
 void _reorg_collection(MapKeyValue *kv, void *collector) {
@@ -210,17 +192,8 @@ int map_hash(void *key, size_t key_len, size_t cap) {
   // ref: The Practice of Programming, B. Kernighan, R. Pike, p 56
   int hash_multiplier = 31;
 
-  /*
-    for (int i = 0; i < key_len; i += 1) {
-      h += hash_multiplier * h + kkey[i];
-    }
-  */
-
-  int i = 0;
-  while (kkey[i] != 0) { // NOTE: possible to do oopsy-doopsy; key should be
-                         // alloced to work exactly as expected
+  for (int i = 0; i < key_len; i += 1) {
     h += hash_multiplier * h + kkey[i];
-    i += 1;
   }
 
   if (cap == 0) {

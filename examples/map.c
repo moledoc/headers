@@ -169,7 +169,7 @@ int main() {
   map_list(map, int_key, NULL);
 
   int *f = (int *)arena_alloc(map->arena, 1 * sizeof(int));
-  *f = 177; // vs `f = 77`
+  *f = 77; // vs `f = 177`
   int *found = (int *)map_find(map, (void *)f, sizeof(*f) / sizeof(int));
   // int f = 77; // don't do this, always alloc
   printf("found this: %p\n", found);
@@ -314,8 +314,6 @@ int main() {
            found4->str, found4->big);
   }
 
-  map_reorg(map);
-
   f4->big = 1234567891;
   found4 = (KV *)map_find(map, (void *)f4, 5);
   if (found4 == NULL) {
@@ -324,6 +322,8 @@ int main() {
     printf("found4 this: {\"%d\", \"%d\", \"%s\", %lu}\n", found4->k, found4->v,
            found4->str, found4->big);
   }
+
+  map_reorg(map);
 
   map_free(map);
 }
