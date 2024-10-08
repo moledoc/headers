@@ -104,7 +104,7 @@ void int_key(MapKeyValue *kv, void *i) {
 int main() {
   Map *map = map_create(NULL, NULL);
 
-  for (int i = 10000; i < 10832; i += 1) {
+  for (int i = 10000; i < 11000; i += 1) {
     int *j = (int *)arena_alloc(map->arena, 1 * sizeof(int));
     *j = i;
     // printf("before HERE -- %d %p\n", i, map->kvs[428]);
@@ -118,6 +118,7 @@ int main() {
   } else {
     printf("ffound this: %d\n", *ffound);
   }
+  map_free(map);
 
   return 0;
 

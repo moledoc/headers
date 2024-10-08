@@ -107,14 +107,17 @@ bool _cmp(void *k1, size_t k1_len, void *k2, size_t k2_len) {
   if (k1_len != k2_len) {
     return false;
   }
-  printf("HERE -- %p %p\n", k1, k2);
 
-  for (int i = 0; i < k1_len; i += 1) {
-    if (((int *)k1)[i] != ((int *)k2)[i]) {
-      return false;
+  /*
+    for (int i = 0; i < k1_len; i += 1) {
+      if (((int *)k1)[i] != ((int *)k2)[i]) {
+        return false;
+      }
     }
-  }
-  return true;
+    return true;
+  */
+
+  return *((int *)k1) == *((int *)k2);
 }
 
 void _reorg_collection(MapKeyValue *kv, void *collector) {
@@ -133,13 +136,8 @@ _reorgCollector *_reorg_extract_kvs(Map *map) {
   return collector;
 }
 
-void _recompute_idx(
-    Map *map,
-    _reorgCollector *collected) { // MapKeyValue **kvs, size_t kv_count) {
+void _recompute_idx(Map *map, _reorgCollector *collected) {
   for (int i = 0; i < collected->offset; i += 1) {
-    if (collected->kvs[i] == NULL) {
-      continue;
-    }
     collected->kvs[i]->next = NULL; // NOTE: avoid pointing to old address
     map_insert(map, collected->kvs[i]->key, collected->kvs[i]->key_len,
                collected->kvs[i]->value);
@@ -158,16 +156,16 @@ void _reorg(Map *map, size_t factor, enum _reorgAction action) {
     new_cap = map->cap / factor;
   }
 
-  MapKeyValue **new = calloc(new_cap, sizeof(MapKeyValue *));
-
   _reorgCollector *collector = _reorg_extract_kvs(map);
 
-  Arena *old_arena = map->arena;
+  // Arena *old_arena = map->arena; // NOTE: can't destroy_old arena,
+  // invalidates ptrs
   MapKeyValue **old_kvs = map->kvs;
 
   // NOTE: half is for size, half for actual data
-  map->arena = arena_create(2 * new_cap);
-  map->kvs = new;
+  // map->arena = arena_create(2 * new_cap); // NOTE: can't destroy_old arena,
+  // invalidates ptrs
+  map->kvs = calloc(new_cap, sizeof(MapKeyValue *));
 
   // NOTE: set map->cap after collection and before recomputing indices
   // map_apply will segfault otherwise in collection
@@ -182,7 +180,8 @@ void _reorg(Map *map, size_t factor, enum _reorgAction action) {
   if (old_kvs != NULL) {
     free(old_kvs);
   }
-  arena_destroy(old_arena);
+  // arena_destroy(old_arena); // NOTE: enabling this will invalidate old ptrs
+  // and you'll get segfault
 }
 
 int map_hash(void *key, size_t key_len, size_t cap) {
