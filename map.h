@@ -99,8 +99,6 @@ typedef struct {
 
 enum _reorgAction { _REORG_INC, _REORG_DEC };
 
-int max(int a, int b) { return a < b ? b : a; }
-
 bool _cmp(void *k1, size_t k1_len, void *k2, size_t k2_len) {
   if (k1 == NULL || k2 == NULL || k1_len <= 0 || k2_len == 0) {
     return false;
@@ -109,6 +107,7 @@ bool _cmp(void *k1, size_t k1_len, void *k2, size_t k2_len) {
   if (k1_len != k2_len) {
     return false;
   }
+  printf("HERE -- %p %p\n", k1, k2);
 
   for (int i = 0; i < k1_len; i += 1) {
     if (((int *)k1)[i] != ((int *)k2)[i]) {
@@ -126,16 +125,24 @@ void _reorg_collection(MapKeyValue *kv, void *collector) {
 }
 
 _reorgCollector *_reorg_extract_kvs(Map *map) {
-  _reorgCollector *collector = calloc(1, sizeof(_reorgCollector));
-  collector->kvs = calloc(map->len, sizeof(MapKeyValue *));
+  _reorgCollector *collector =
+      (_reorgCollector *)arena_alloc(map->arena, 1 * sizeof(_reorgCollector));
+  collector->kvs =
+      (MapKeyValue **)arena_alloc(map->arena, map->len * sizeof(MapKeyValue *));
   map_apply(map, _reorg_collection, (void *)collector);
   return collector;
 }
 
-void _recompute_idx(Map *map, MapKeyValue **kvs, size_t kv_count) {
-  for (int i = 0; i < kv_count; i += 1) {
-    kvs[i]->next = NULL; // NOTE: avoid pointing to old address
-    map_insert(map, kvs[i]->key, kvs[i]->key_len, kvs[i]->value);
+void _recompute_idx(
+    Map *map,
+    _reorgCollector *collected) { // MapKeyValue **kvs, size_t kv_count) {
+  for (int i = 0; i < collected->offset; i += 1) {
+    if (collected->kvs[i] == NULL) {
+      continue;
+    }
+    collected->kvs[i]->next = NULL; // NOTE: avoid pointing to old address
+    map_insert(map, collected->kvs[i]->key, collected->kvs[i]->key_len,
+               collected->kvs[i]->value);
   }
 }
 
@@ -156,12 +163,10 @@ void _reorg(Map *map, size_t factor, enum _reorgAction action) {
   _reorgCollector *collector = _reorg_extract_kvs(map);
 
   Arena *old_arena = map->arena;
-  map->arena =
-      arena_create(2 * new_cap); // NOTE: half is for size, half for actual data
+  MapKeyValue **old_kvs = map->kvs;
 
-  if (map->kvs) {
-    free(map->kvs);
-  }
+  // NOTE: half is for size, half for actual data
+  map->arena = arena_create(2 * new_cap);
   map->kvs = new;
 
   // NOTE: set map->cap after collection and before recomputing indices
@@ -169,15 +174,13 @@ void _reorg(Map *map, size_t factor, enum _reorgAction action) {
   // and recomputing uses hash, which uses map->cap.
   map->cap = new_cap;
 
-  map->len = 0; // NOTE: set len to zero, because insert will increase map->len
+  // NOTE: set len to zero, because insert will increase map->len
+  map->len = 0;
 
-  _recompute_idx(map, collector->kvs, collector->offset);
+  _recompute_idx(map, collector);
 
-  if (collector->kvs != NULL) {
-    free(collector->kvs);
-  }
-  if (collector != NULL) {
-    free(collector);
+  if (old_kvs != NULL) {
+    free(old_kvs);
   }
   arena_destroy(old_arena);
 }

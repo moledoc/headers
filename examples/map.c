@@ -53,7 +53,7 @@ int main() {
   // map_list(map, str_key, (void *)&counter);
 
   char *k1_1 = "k1_1";
-  map = map_insert(map, k1_1, sizeof(k1_1) / sizeof(char *), "k1_1");
+  map = map_insert(map, k1_1, strlen(k1_1), "k1_1");
   char *k1_2 = "k1_2";
   map = map_insert(map, k1_2, sizeof(k1_2) / sizeof(char *), "k1_2");
   char *k1_3 = "k1_3";
@@ -103,6 +103,23 @@ void int_key(MapKeyValue *kv, void *i) {
 
 int main() {
   Map *map = map_create(NULL, NULL);
+
+  for (int i = 10000; i < 10832; i += 1) {
+    int *j = (int *)arena_alloc(map->arena, 1 * sizeof(int));
+    *j = i;
+    // printf("before HERE -- %d %p\n", i, map->kvs[428]);
+    map_insert(map, (void *)j, 1, (void *)j);
+    // printf("after HERE -- %d %p\n", i, map->kvs[428]);
+  }
+  int ff = 10459;
+  int *ffound = (int *)map_find(map, (void *)&ff, 1);
+  if (ffound == NULL) {
+    printf("ffound: not found\n");
+  } else {
+    printf("ffound this: %d\n", *ffound);
+  }
+
+  return 0;
 
   for (int i = 0; i < 100; i += 1) {
     int *j = (int *)arena_alloc(map->arena, 1 * sizeof(int));
