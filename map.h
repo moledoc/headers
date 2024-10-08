@@ -332,7 +332,7 @@ Map *map_insert(Map *map, void *key, size_t key_len, void *value) {
         (MapKeyValue *)arena_alloc(map->arena, sizeof(MapKeyValue));
     kv->key = key;
     kv->key_len = key_len;
-    kv->value = value;
+    kv->value = value != NULL ? value : &((_empty){});
     kv->next = NULL;
 
     prev->next = kv;
