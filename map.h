@@ -104,11 +104,11 @@ bool _cmp(void *k1, size_t k1_len, void *k2, size_t k2_len) {
     return false;
   }
 
+  /*
   if (k1_len != k2_len) {
     return false;
   }
 
-  /*
     for (int i = 0; i < k1_len; i += 1) {
       if (((int *)k1)[i] != ((int *)k2)[i]) {
         return false;
@@ -185,7 +185,10 @@ void _reorg(Map *map, size_t factor, enum _reorgAction action) {
 }
 
 int map_hash(void *key, size_t key_len, size_t cap) {
-  int *kkey = (int *)key;
+  if (key == NULL) {
+    return 0;
+  }
+  //   int *kkey = (int *)key;
   int h = 0;
 
   // hash_multiplier is multiplier used when calculating
@@ -194,8 +197,16 @@ int map_hash(void *key, size_t key_len, size_t cap) {
   // ref: The Practice of Programming, B. Kernighan, R. Pike, p 56
   int hash_multiplier = 31;
 
-  for (int i = 0; i < key_len; i += 1) {
-    h += hash_multiplier * h + kkey[i];
+  /*
+    for (int i = 0; i < key_len; i += 1) {
+      h += hash_multiplier * h + kkey[i];
+    }
+  */
+
+  // for (int i = 2; (*kkey >> i) > 0; i += 1) {
+  // h += hash_multiplier * h + (*kkey >> i);
+  for (int i = *(int *)key; i > 0; i >>= 4) {
+    h += hash_multiplier * h + i;
   }
 
   if (cap == 0) {
