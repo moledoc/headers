@@ -205,9 +205,13 @@ int map_hash(void *key, size_t key_len, size_t cap) {
 
   // for (int i = 2; (*kkey >> i) > 0; i += 1) {
   // h += hash_multiplier * h + (*kkey >> i);
-  for (int i = *(int *)key; i > 0; i >>= 4) {
-    h += hash_multiplier * h + i;
-  }
+  //
+
+  // for (int i = *(int *)key; i > 0; i >>= 2) {
+  //  h += hash_multiplier * h + i;
+  // }
+
+  h = *(int *)key;
 
   if (cap == 0) {
     cap = key_len;

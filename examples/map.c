@@ -27,7 +27,7 @@ int main() {
   map_list(map, str_key, NULL);
 
   char *k1 = "key1";
-  map = map_insert(map, k1, strlen(k1), "maybe works");
+  map = map_insert(map, k1, 4, "maybe works");
   printf("Map contents:\n");
   map_list(map, str_key, NULL);
 
@@ -184,7 +184,7 @@ int main() {
     *j = i;
     map_insert(map, (void *)j, sizeof(i) / sizeof(int), NULL);
   }
-  map_list(map, int_key, NULL);
+  // map_list(map, int_key, NULL);
 
   int *f = (int *)arena_alloc(map->arena, 1 * sizeof(int));
   *f = 77; // vs `f = 177`
