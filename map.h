@@ -70,9 +70,6 @@ void *map_find(Map *map, void *key);
 // frees memory.
 Map *map_delete(Map *map, void *key);
 
-// map_reorg cleans temporary values in map->arena.
-void map_reorg(Map *map);
-
 #endif // defined(MAP) // HEADER
 // }
 
@@ -349,8 +346,6 @@ Map *map_delete(Map *map, void *key) {
 
   return map;
 }
-
-void map_reorg(Map *map) { _reorg(map, 1, _REORG_INC); }
 
 #endif // defined(MAP) // IMPLEMENTATION
 // }
