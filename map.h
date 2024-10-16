@@ -14,13 +14,12 @@
 
 typedef struct MapKeyValue {
   void *key;
-  size_t key_len;
   void *value;
   struct MapKeyValue *next;
 } MapKeyValue;
 
 typedef struct {
-  int (*hash)(void *key, size_t key_len, size_t cap);
+  int (*hash)(void *key, size_t cap);
   Arena *arena;
   MapKeyValue **kvs;
   size_t len;
@@ -28,7 +27,7 @@ typedef struct {
 } Map;
 
 // map_hash is default hashing function.
-int map_hash(void *key, size_t key_len, size_t cap);
+int map_hash(void *key, size_t cap);
 
 // map_apply executes func fn on each list element with given argument.
 void map_apply(Map *map, void (*fn)(MapKeyValue *, void *), void *arg);
@@ -46,8 +45,7 @@ void map_free(Map *map);
 // * multiplier likely data values;
 // * ref: The Practice of Programming, B. Kernighan, R. Pike, p 57
 // allocs memory.
-Map *map_create(int (*hash)(void *key, size_t key_len, size_t cap),
-                size_t *pbucket_size);
+Map *map_create(int (*hash)(void *key, size_t cap), size_t *pbucket_size);
 
 // map_list prints the entire map.
 void map_list(Map *map, void (*print)(MapKeyValue *, void *), void *fmt);
@@ -56,24 +54,21 @@ void map_list(Map *map, void (*print)(MapKeyValue *, void *), void *fmt);
 // differently:
 // if `key` doesn't exist, insert the `value`
 // if `key` exists, update the `value`
-// returns NULL if `map` or `key` is NULL or key_len <= 0
-// key_len is the count of objects in the key, examples:
-// * int - 1
-// * char * - 1 (but providing strlen as key_len seems to also work ¯\_(-.-)_/¯
-// )
-// * {.x(int), .y(int)} - 2
-// * {.x(int), .y(int), .z(char *)} - 3
-// NULL `value` is allowed.
+// returns NULL if `map` or `key` is NULL.
+// NULL `value` is allowed,
+// in which case internal empty struct is used
+// (i.e. all values will point to same object).
+// NULL value is useful, when only key is important.
 // allocs memory.
-Map *map_insert(Map *map, void *key, size_t key_len, void *value);
+Map *map_insert(Map *map, void *key, void *value);
 
 // map_find retrieves value corresponding to the key.
 // returns NULL if map is NULL or `key` not found.
-void *map_find(Map *map, void *key, size_t key_len);
+void *map_find(Map *map, void *key);
 
 // map_delete removes key-value from `map`.
 // frees memory.
-Map *map_delete(Map *map, void *key, size_t key_len);
+Map *map_delete(Map *map, void *key);
 
 // map_reorg cleans temporary values in map->arena.
 void map_reorg(Map *map);
@@ -99,23 +94,10 @@ typedef struct {
 
 enum _reorgAction { _REORG_INC, _REORG_DEC };
 
-bool _cmp(void *k1, size_t k1_len, void *k2, size_t k2_len) {
-  if (k1 == NULL || k2 == NULL || k1_len <= 0 || k2_len == 0) {
+bool _cmp(void *k1, void *k2) {
+  if (k1 == NULL || k2 == NULL) {
     return false;
   }
-
-  /*
-  if (k1_len != k2_len) {
-    return false;
-  }
-
-    for (int i = 0; i < k1_len; i += 1) {
-      if (((int *)k1)[i] != ((int *)k2)[i]) {
-        return false;
-      }
-    }
-    return true;
-  */
 
   return *((int *)k1) == *((int *)k2);
 }
@@ -139,13 +121,12 @@ _reorgCollector *_reorg_extract_kvs(Map *map) {
 void _recompute_idx(Map *map, _reorgCollector *collected) {
   for (int i = 0; i < collected->offset; i += 1) {
     collected->kvs[i]->next = NULL; // NOTE: avoid pointing to old address
-    map_insert(map, collected->kvs[i]->key, collected->kvs[i]->key_len,
-               collected->kvs[i]->value);
+    map_insert(map, collected->kvs[i]->key, collected->kvs[i]->value);
   }
 }
 
 void _reorg(Map *map, size_t factor, enum _reorgAction action) {
-  if (map == NULL || factor <= 0) { // NOTE: allow factor 1 to clean arena
+  if (map == NULL || factor <= 1) {
     return;
   }
 
@@ -158,13 +139,7 @@ void _reorg(Map *map, size_t factor, enum _reorgAction action) {
 
   _reorgCollector *collector = _reorg_extract_kvs(map);
 
-  // Arena *old_arena = map->arena; // NOTE: can't destroy_old arena,
-  // invalidates ptrs
   MapKeyValue **old_kvs = map->kvs;
-
-  // NOTE: half is for size, half for actual data
-  // map->arena = arena_create(2 * new_cap); // NOTE: can't destroy_old arena,
-  // invalidates ptrs
   map->kvs = calloc(new_cap, sizeof(MapKeyValue *));
 
   // NOTE: set map->cap after collection and before recomputing indices
@@ -180,46 +155,31 @@ void _reorg(Map *map, size_t factor, enum _reorgAction action) {
   if (old_kvs != NULL) {
     free(old_kvs);
   }
-  // arena_destroy(old_arena); // NOTE: enabling this will invalidate old ptrs
-  // and you'll get segfault
 }
 
-int map_hash(void *key, size_t key_len, size_t cap) {
+// NOTE: I'm not 100% sure of the correctness of this, but thus far it has been
+// working the best.
+// Need further testing to make sure.
+int map_hash(void *key, size_t cap) {
   if (key == NULL) {
     return 0;
   }
-  //   int *kkey = (int *)key;
   int h = 0;
 
   // hash_multiplier is multiplier used when calculating
   // hash for string map key.
-  // Empirically shown to be good;
+  // Value 31 is empirically shown to be good;
   // ref: The Practice of Programming, B. Kernighan, R. Pike, p 56
-  int hash_multiplier = 31;
-
-  /*
-    for (int i = 0; i < key_len; i += 1) {
-      h += hash_multiplier * h + kkey[i];
-    }
-  */
-
-  // for (int i = 2; (*kkey >> i) > 0; i += 1) {
-  // h += hash_multiplier * h + (*kkey >> i);
-  //
-
-  // for (int i = *(int *)key; i > 0; i >>= 2) {
-  //  h += hash_multiplier * h + i;
-  // }
+  // int hash_multiplier = 31;
+  // NOTE: not used due to current hash calculation
+  // approach, but this could change in the future.
 
   h = *(int *)key;
 
-  if (cap == 0) {
-    cap = key_len;
-  }
   if (h < 0) {
     h *= -1;
   }
-  return h % cap;
+  return cap > 0 ? h % cap : h;
 }
 
 void map_apply(Map *map, void (*fn)(MapKeyValue *, void *), void *arg) {
@@ -246,8 +206,7 @@ void map_free(Map *map) {
   }
 }
 
-Map *map_create(int (*hash)(void *key, size_t key_len, size_t cap),
-                size_t *pbucket_size) {
+Map *map_create(int (*hash)(void *key, size_t cap), size_t *pbucket_size) {
   if (hash == NULL) {
     hash = map_hash;
   }
@@ -277,12 +236,12 @@ void map_list(Map *map, void (*print)(MapKeyValue *, void *), void *fmt) {
   return;
 }
 
-void *map_find(Map *map, void *key, size_t key_len) {
-  if (map == NULL || key == NULL || key_len <= 0) {
+void *map_find(Map *map, void *key) {
+  if (map == NULL || key == NULL) {
     return NULL;
   }
 
-  int idx = map->hash(key, key_len, map->cap);
+  int idx = map->hash(key, map->cap);
 
   MapKeyValue *cur = map->kvs[idx];
 
@@ -291,25 +250,24 @@ void *map_find(Map *map, void *key, size_t key_len) {
   }
 
   for (; cur != NULL; cur = cur->next) {
-    if (_cmp(cur->key, cur->key_len, key, key_len)) {
+    if (_cmp(cur->key, key)) {
       return cur->value;
     }
   }
   return NULL;
 }
 
-Map *map_insert(Map *map, void *key, size_t key_len, void *value) {
-  if (map == NULL || key == NULL || key_len <= 0) {
+Map *map_insert(Map *map, void *key, void *value) {
+  if (map == NULL || key == NULL) {
     return NULL;
   }
-  int idx = map->hash(key, key_len, map->cap);
+  int idx = map->hash(key, map->cap);
 
   if (map->kvs[idx] == NULL) {
 
     MapKeyValue *kv =
         (MapKeyValue *)arena_alloc(map->arena, sizeof(MapKeyValue));
     kv->key = key;
-    kv->key_len = key_len;
     kv->value = value != NULL ? value : &((_empty){});
     kv->next = NULL;
 
@@ -324,7 +282,7 @@ Map *map_insert(Map *map, void *key, size_t key_len, void *value) {
   MapKeyValue *cur = map->kvs[idx];
   MapKeyValue *prev = map->kvs[idx];
   for (; cur != NULL; cur = cur->next) {
-    if (_cmp(cur->key, cur->key_len, key, key_len)) {
+    if (_cmp(cur->key, key)) {
       cur->value = value;
       return map;
     }
@@ -335,7 +293,6 @@ Map *map_insert(Map *map, void *key, size_t key_len, void *value) {
     MapKeyValue *kv =
         (MapKeyValue *)arena_alloc(map->arena, sizeof(MapKeyValue));
     kv->key = key;
-    kv->key_len = key_len;
     kv->value = value != NULL ? value : &((_empty){});
     kv->next = NULL;
 
@@ -350,17 +307,17 @@ Map *map_insert(Map *map, void *key, size_t key_len, void *value) {
   return map;
 }
 
-Map *map_delete(Map *map, void *key, size_t key_len) {
-  if (map == NULL || key == NULL || key_len <= 0) {
+Map *map_delete(Map *map, void *key) {
+  if (map == NULL || key == NULL) {
     return NULL;
   }
-  int idx = map->hash(key, key_len, map->cap);
+  int idx = map->hash(key, map->cap);
 
   if (map->kvs[idx] == NULL) {
     return map;
   }
 
-  if (_cmp(map->kvs[idx]->key, map->kvs[idx]->key_len, key, key_len)) {
+  if (_cmp(map->kvs[idx]->key, key)) {
     MapKeyValue *new_head = map->kvs[idx]->next;
     arena_free(map->arena, map->kvs[idx]);
     map->kvs[idx] = new_head;
@@ -377,7 +334,7 @@ Map *map_delete(Map *map, void *key, size_t key_len) {
   MapKeyValue *cur = prev->next;
 
   for (; cur != NULL; cur = cur->next) {
-    if (_cmp(cur->key, cur->key_len, key, key_len)) {
+    if (_cmp(cur->key, key)) {
       prev->next = cur->next;
       arena_free(map->arena, cur);
       map->len -= 1;

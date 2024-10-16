@@ -74,7 +74,7 @@ clang main.c -DQUEUE && ./a.out --run all
 
 ## Notes
 
-* use arenas as allocators
+* MAYBE: use arenas as allocators
 	* _create functions should return arenas;
 	* _create functions might make data structures less ergonomic atm
 * Currently refactor in progress
